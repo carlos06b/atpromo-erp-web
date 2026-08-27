@@ -9,7 +9,7 @@ public class Client {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
-    private int id;
+    private Integer id;
 
     @Column(name = "name")
     private String name;
@@ -60,8 +60,8 @@ public class Client {
     public String getCompanyLink() { return companyLink; }
     public void setCompanyLink(String companyLink) { this.companyLink = companyLink; }
 
-    public int getId() { return id; }
-    public void setId(int id) { this.id = id; }
+    public Integer getId() { return id; }
+    public void setId(Integer id) { this.id = id; }
 
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }

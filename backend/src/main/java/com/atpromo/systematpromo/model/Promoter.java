@@ -12,7 +12,7 @@ public class Promoter {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "idpromoter")
-    private int id;
+    private Integer id;
 
     @Column(name = "name")
     private String name;
@@ -76,8 +76,8 @@ public class Promoter {
     public String getCity() { return city; }
     public void setCity(String city) { this.city = city; }
 
-    public int getId() { return id; }
-    public void setId(int id) { this.id = id; }
+    public Integer getId() { return id; }
+    public void setId(Integer id) { this.id = id; }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }

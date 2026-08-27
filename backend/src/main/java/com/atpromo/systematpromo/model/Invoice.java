@@ -12,7 +12,7 @@ public class Invoice {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
-    private int id;
+    private Integer id;
 
     @Column(name = "id_client")
     private int clientId;
@@ -62,8 +62,8 @@ public class Invoice {
         this.status = status;
     }
 
-    public int getId() { return id; }
-    public void setId(int id) { this.id = id; }
+    public Integer getId() { return id; }
+    public void setId(Integer id) { this.id = id; }
 
     public int getClientId() { return clientId; }
     public void setClientId(int clientId) { this.clientId = clientId; }
