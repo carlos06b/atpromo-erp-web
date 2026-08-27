@@ -38,6 +38,7 @@ target/
 ### Arquivos sensíveis
 .env
 config.properties
+application-local.properties
 
 ### Logs
 *.log

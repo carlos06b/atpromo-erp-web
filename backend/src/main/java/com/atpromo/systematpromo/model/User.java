@@ -14,6 +14,8 @@ public class User {
     private String name;
     private String email;
     private String password;
+
+    @Column(name = "jobTittle")
     private String jobTittle;
 
     public User() {
