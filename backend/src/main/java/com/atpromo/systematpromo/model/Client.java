@@ -1,13 +1,35 @@
 package com.atpromo.systematpromo.model;
 
+import jakarta.persistence.*;
+
+@Entity
+@Table(name = "client")
 public class Client {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id")
     private int id;
+
+    @Column(name = "name")
     private String name;
+
+    @Column(name = "cnpj")
     private String cnpj;
+
+    @Column(name = "phone")
     private String phone;
+
+    @Column(name = "email")
     private String email;
+
+    @Column(name = "active")
     private boolean active;
+
+    @Column(name = "company_link")
     private String companyLink;
+
+    @Column(name = "corporate_name")
     private String corporateName;
 
     public Client() {
@@ -32,67 +54,27 @@ public class Client {
         this.companyLink = companyLink;
     }
 
-    public String getCorporateName() {
-        return corporateName;
-    }
+    public String getCorporateName() { return corporateName; }
+    public void setCorporateName(String corporateName) { this.corporateName = corporateName; }
 
-    public void setCorporateName(String corporateName) {
-        this.corporateName = corporateName;
-    }
+    public String getCompanyLink() { return companyLink; }
+    public void setCompanyLink(String companyLink) { this.companyLink = companyLink; }
 
-    public String getCompanyLink() {
-        return companyLink;
-    }
+    public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
 
-    public void setCompanyLink(String companyLink) {
-        this.companyLink = companyLink;
-    }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 
-    public int getId() {
-        return id;
-    }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 
-    public String getEmail() {
-        return email;
-    }
+    public String getCnpj() { return cnpj; }
+    public void setCnpj(String cnpj) { this.cnpj = cnpj; }
 
-    public void setEmail(String email) {
-        this.email = email;
-    }
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
 
-    public String getName() {
-        return name;
-    }
-
-    public String getCnpj() {
-        return cnpj;
-    }
-
-    public String getPhone() {
-        return phone;
-    }
-
-    public boolean isActive() {
-        return active;
-    }
-
-    public void setId(int id) {
-        this.id = id;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public void setCnpj(String cnpj) {
-        this.cnpj = cnpj;
-    }
-
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-
-    public void setActive(boolean active) {
-        this.active = active;
-    }
+    public boolean isActive() { return active; }
+    public void setActive(boolean active) { this.active = active; }
 }

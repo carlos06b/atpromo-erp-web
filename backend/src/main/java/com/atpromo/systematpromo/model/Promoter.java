@@ -1,22 +1,53 @@
 package com.atpromo.systematpromo.model;
 
+import jakarta.persistence.*;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+@Entity
+@Table(name = "promoter")
 public class Promoter {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "idpromoter")
     private int id;
+
+    @Column(name = "name")
     private String name;
+
+    @Column(name = "cpf")
     private String cpf;
+
+    @Column(name = "phone")
     private String phone;
+
+    @Column(name = "uf")
     private String uf;
+
+    @Column(name = "city")
     private String city;
+
+    @Column(name = "date_birth")
     private LocalDate dateBirth;
+
+    @Column(name = "active")
     private boolean active;
+
+    @Column(name = "salary")
     private BigDecimal salary;
-    private String type; // CLT ou MEI
+
+    @Column(name = "type")
+    private String type;
+
+    @Column(name = "pix")
     private String pix;
+
+    @Column(name = "pix_type")
     private String pixType;
+
+    @Column(name = "company_link")
     private String companyLink;
 
     public Promoter() {
@@ -39,114 +70,42 @@ public class Promoter {
         this.pixType = pixType;
     }
 
-    public String getUf() {
-        return uf;
-    }
+    public String getUf() { return uf; }
+    public void setUf(String uf) { this.uf = uf; }
 
-    public void setUf(String uf) {
-        this.uf = uf;
-    }
+    public String getCity() { return city; }
+    public void setCity(String city) { this.city = city; }
 
-    public String getCity() {
-        return city;
-    }
+    public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
 
-    public void setCity(String city) {
-        this.city = city;
-    }
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 
-    public int getId() {
-        return id;
-    }
+    public String getCpf() { return cpf; }
+    public void setCpf(String cpf) { this.cpf = cpf; }
 
-    public void setId(int id) {
-        this.id = id;
-    }
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
 
+    public LocalDate getDateBirth() { return dateBirth; }
+    public void setDateBirth(LocalDate dateBirth) { this.dateBirth = dateBirth; }
 
-    public String getName() {
-        return name;
-    }
+    public boolean isActive() { return active; }
+    public void setActive(boolean active) { this.active = active; }
 
-    public void setName(String name) {
-        this.name = name;
-    }
+    public BigDecimal getSalary() { return salary; }
+    public void setSalary(BigDecimal salary) { this.salary = salary; }
 
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
 
-    public String getCpf() {
-        return cpf;
-    }
+    public String getPix() { return pix; }
+    public void setPix(String pix) { this.pix = pix; }
 
-    public void setCpf(String cpf) {
-        this.cpf = cpf;
-    }
+    public String getPixType() { return pixType; }
+    public void setPixType(String pixType) { this.pixType = pixType; }
 
-
-    public String getPhone() {
-        return phone;
-    }
-
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-
-
-    public LocalDate getDateBirth() {
-        return dateBirth;
-    }
-
-    public void setDateBirth(LocalDate dateBirth) {
-        this.dateBirth = dateBirth;
-    }
-
-
-    public boolean isActive() {
-        return active;
-    }
-
-    public void setActive(boolean active) {
-        this.active = active;
-    }
-
-
-    public BigDecimal getSalary() {
-        return salary;
-    }
-
-    public void setSalary(BigDecimal salary) {
-        this.salary = salary;
-    }
-
-
-    public String getType() {
-        return type;
-    }
-
-    public void setType(String type) {
-        this.type = type;
-    }
-
-    public String getPix() {
-        return pix;
-    }
-
-    public void setPix(String pix) {
-        this.pix = pix;
-    }
-
-    public String getPixType() {
-        return pixType;
-    }
-
-    public void setPixType(String pixType) {
-        this.pixType = pixType;
-    }
-
-    public String getCompanyLink() {
-        return companyLink;
-    }
-
-    public void setCompanyLink(String companyLink) {
-        this.companyLink = companyLink;
-    }
+    public String getCompanyLink() { return companyLink; }
+    public void setCompanyLink(String companyLink) { this.companyLink = companyLink; }
 }
