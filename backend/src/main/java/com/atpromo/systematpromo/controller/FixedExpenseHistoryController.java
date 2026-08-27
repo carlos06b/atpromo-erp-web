@@ -2,9 +2,8 @@ package com.atpromo.systematpromo.controller;
 
 import com.atpromo.systematpromo.model.FixedExpenseHistory;
 import com.atpromo.systematpromo.repository.FixedExpenseHistoryRepository;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -21,5 +20,35 @@ public class FixedExpenseHistoryController {
     @GetMapping
     public List<FixedExpenseHistory> listAll() {
         return fixedExpenseHistoryRepository.findAll();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<FixedExpenseHistory> getById(@PathVariable int id) {
+        return fixedExpenseHistoryRepository.findById(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @PostMapping
+    public FixedExpenseHistory create(@RequestBody FixedExpenseHistory fixedExpenseHistory) {
+        return fixedExpenseHistoryRepository.save(fixedExpenseHistory);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<FixedExpenseHistory> update(@PathVariable int id, @RequestBody FixedExpenseHistory fixedExpenseHistory) {
+        if (!fixedExpenseHistoryRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        fixedExpenseHistory.setId(id);
+        return ResponseEntity.ok(fixedExpenseHistoryRepository.save(fixedExpenseHistory));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable int id) {
+        if (!fixedExpenseHistoryRepository.existsById(id)) {
+            return ResponseEntity.notFound().build();
+        }
+        fixedExpenseHistoryRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 }
