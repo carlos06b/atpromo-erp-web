@@ -53,7 +53,7 @@ public class Promoter {
     public Promoter() {
     }
 
-    public Promoter(int id, String name, String cpf, String phone, String uf, String city,
+    public Promoter(Integer id, String name, String cpf, String phone, String uf, String city,
                     LocalDate dateBirth, boolean active, BigDecimal salary, String type,
                     String pix, String pixType) {
         this.id = id;

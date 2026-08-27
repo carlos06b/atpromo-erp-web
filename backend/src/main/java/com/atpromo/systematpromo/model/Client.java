@@ -44,7 +44,7 @@ public class Client {
         this.active = active;
     }
 
-    public Client(int id, String name, String cnpj, String phone, String email, boolean active, String companyLink) {
+    public Client(Integer id, String name, String cnpj, String phone, String email, boolean active, String companyLink) {
         this.id = id;
         this.name = name;
         this.cnpj = cnpj;

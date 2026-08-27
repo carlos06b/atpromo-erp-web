@@ -35,7 +35,7 @@ public class FinancePromoter {
     public FinancePromoter() {
     }
 
-    public FinancePromoter(int id, BigDecimal amount, LocalDate date, int idPromoter, String status, String type) {
+    public FinancePromoter(Integer id, BigDecimal amount, LocalDate date, int idPromoter, String status, String type) {
         this.id = id;
         this.amount = amount;
         this.date = date;

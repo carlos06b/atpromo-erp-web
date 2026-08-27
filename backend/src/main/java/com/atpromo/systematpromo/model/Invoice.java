@@ -49,7 +49,7 @@ public class Invoice {
         this.status = "PENDENTE";
     }
 
-    public Invoice(int id, int clientId, BigDecimal amount, BigDecimal receivedAmount, String description,
+    public Invoice(Integer id, int clientId, BigDecimal amount, BigDecimal receivedAmount, String description,
                    LocalDate dueDate, LocalDate issueDate, LocalDate paymentDate, String status) {
         this.id = id;
         this.clientId = clientId;

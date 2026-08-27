@@ -38,7 +38,7 @@ public class Request {
     @Column(name = "amount")
     private BigDecimal amount;
 
-    public Request(int id, int id_UserRH, int id_UserFin, int id_Promoter, String type, BigDecimal amount, String message, String status, LocalDateTime date) {
+    public Request(Integer id, int id_UserRH, int id_UserFin, int id_Promoter, String type, BigDecimal amount, String message, String status, LocalDateTime date) {
         this.id = id;
         this.id_UserRH = id_UserRH;
         this.id_UserFin = id_UserFin;

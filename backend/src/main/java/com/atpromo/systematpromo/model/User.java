@@ -21,7 +21,7 @@ public class User {
     public User() {
     }
 
-    public User(int id, String email, String jobTittle, String name, String password) {
+    public User(Integer id, String email, String jobTittle, String name, String password) {
         this.id = id;
         this.email = email;
         this.jobTittle = jobTittle;
