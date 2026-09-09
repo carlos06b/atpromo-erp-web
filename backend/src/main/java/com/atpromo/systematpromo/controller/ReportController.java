@@ -1,127 +1,154 @@
 package com.atpromo.systematpromo.controller;
 
-import com.atpromo.systematpromo.dao.FinancePromoterDAO;
-import com.atpromo.systematpromo.dao.FixedExpenseHistoryDAO;
-import com.atpromo.systematpromo.dao.InvoiceDAO;
-import com.atpromo.systematpromo.dao.VariableExpenseDAO;
+import com.atpromo.systematpromo.model.Client;
+import com.atpromo.systematpromo.model.FinancePromoter;
 import com.atpromo.systematpromo.model.FixedExpenseHistory;
-import com.atpromo.systematpromo.model.InvoiceView;
+import com.atpromo.systematpromo.model.Invoice;
+import com.atpromo.systematpromo.model.Promoter;
 import com.atpromo.systematpromo.model.VariableExpense;
+import com.atpromo.systematpromo.repository.ClientRepository;
+import com.atpromo.systematpromo.repository.FinancePromoterRepository;
+import com.atpromo.systematpromo.repository.FixedExpenseHistoryRepository;
+import com.atpromo.systematpromo.repository.InvoiceRepository;
+import com.atpromo.systematpromo.repository.PromoterRepository;
+import com.atpromo.systematpromo.repository.VariableExpenseRepository;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.text.NumberFormat;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
+import java.util.stream.Collectors;
 
+@RestController
+@RequestMapping("/api/reports")
 public class ReportController {
 
-    private final FinancePromoterDAO financePromoterDAO = new FinancePromoterDAO();
-    private final FixedExpenseHistoryDAO fixedExpenseHistoryDAO = new FixedExpenseHistoryDAO();
-    private final VariableExpenseDAO variableExpenseDAO = new VariableExpenseDAO();
-    private final InvoiceDAO invoiceDAO = new InvoiceDAO();
+    private final InvoiceRepository invoiceRepository;
+    private final FinancePromoterRepository financePromoterRepository;
+    private final FixedExpenseHistoryRepository fixedExpenseHistoryRepository;
+    private final VariableExpenseRepository variableExpenseRepository;
+    private final ClientRepository clientRepository;
+    private final PromoterRepository promoterRepository;
 
-    private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-
-    public void showGeneralReport(LocalDate start, LocalDate end) {
-        System.out.println(buildGeneralReport(start, end));
+    public ReportController(InvoiceRepository invoiceRepository,
+                            FinancePromoterRepository financePromoterRepository,
+                            FixedExpenseHistoryRepository fixedExpenseHistoryRepository,
+                            VariableExpenseRepository variableExpenseRepository,
+                            ClientRepository clientRepository,
+                            PromoterRepository promoterRepository) {
+        this.invoiceRepository = invoiceRepository;
+        this.financePromoterRepository = financePromoterRepository;
+        this.fixedExpenseHistoryRepository = fixedExpenseHistoryRepository;
+        this.variableExpenseRepository = variableExpenseRepository;
+        this.clientRepository = clientRepository;
+        this.promoterRepository = promoterRepository;
     }
 
-    public String buildGeneralReport(LocalDate start, LocalDate end) {
+    @GetMapping("/general")
+    public GeneralReport getGeneralReport(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+
         validatePeriod(start, end);
 
-        BigDecimal expectedIncome = invoiceDAO.getTotalExpectedByDueDatePeriod(start, end);
-        BigDecimal issuedIncome = invoiceDAO.getTotalIssuedByIssuePeriod(start, end);
-        BigDecimal receivedIncome = invoiceDAO.getTotalPaidByPaymentPeriod(start, end);
-        BigDecimal openIncome = invoiceDAO.getTotalOpenByDueDatePeriod(start, end);
-        BigDecimal canceledIncome = invoiceDAO.getTotalCanceledByDueDatePeriod(start, end);
+        List<Invoice> invoices = invoiceRepository.findAll();
+        List<FinancePromoter> finances = financePromoterRepository.findAll();
 
-        Map<String, BigDecimal> promoterTotals = financePromoterDAO.getTotalByTypeAndPeriod(start, end);
+        BigDecimal expectedIncome = totalExpectedByDueDate(invoices, start, end);
+        BigDecimal issuedIncome = totalIssuedByIssueDate(invoices, start, end);
+        BigDecimal receivedIncome = totalPaidByPaymentDate(invoices, start, end);
+        BigDecimal openIncome = totalOpenByDueDate(invoices, start, end);
+        BigDecimal canceledIncome = totalCanceledByDueDate(invoices, start, end);
+
+        Map<String, BigDecimal> promoterTotals = totalByTypeAndPeriod(finances, start, end);
 
         BigDecimal promoterExpenses = calculatePromoterExpenses(promoterTotals);
         BigDecimal fixedExpenses = calculateFixedExpenses(start, end);
         BigDecimal variableExpenses = calculateVariableExpenses(start, end);
         BigDecimal discounts = promoterTotals.getOrDefault("DESCONTO", BigDecimal.ZERO);
 
-        BigDecimal totalExpenses = promoterExpenses
-                .add(fixedExpenses)
-                .add(variableExpenses);
+        BigDecimal totalExpenses = promoterExpenses.add(fixedExpenses).add(variableExpenses);
 
         BigDecimal realResult = receivedIncome.subtract(totalExpenses);
         BigDecimal expectedResult = expectedIncome.subtract(totalExpenses);
 
-        StringBuilder report = new StringBuilder();
-
-        appendHeader(report, "VISÃO GERAL FINANCEIRA", start, end);
-
-        appendSection(report, "ENTRADAS E RECEBIMENTOS");
-        appendMetric(report, "Faturamento previsto no período", expectedIncome);
-        appendMetric(report, "Faturamento emitido no período", issuedIncome);
-        appendMetric(report, "Recebido no período", receivedIncome);
-        appendMetric(report, "A receber no período", openIncome);
-        appendMetric(report, "Faturamento cancelado", canceledIncome);
-
-        appendSection(report, "SAÍDAS E COMPROMISSOS");
-        appendMetric(report, "Financeiro de promotores", promoterExpenses);
-        appendMetric(report, "Despesas fixas", fixedExpenses);
-        appendMetric(report, "Despesas variáveis", variableExpenses);
-        appendMetric(report, "Total de saídas", totalExpenses);
-        appendMetric(report, "Descontos aplicados", discounts);
-
-        appendSection(report, "RESULTADO");
-        appendMetric(report, "Resultado por recebimento", realResult);
-        appendMetric(report, "Resultado previsto", expectedResult);
-
-        report.append("\nLeitura rápida:\n");
-        report.append("- Resultado por recebimento = recebido no período menos saídas.\n");
-        report.append("- Resultado previsto = faturamento previsto menos saídas.\n");
-        report.append("- A receber considera faturamentos pendentes ou faturados ainda não pagos.\n");
-
-        return report.toString();
+        return new GeneralReport(expectedIncome, issuedIncome, receivedIncome, openIncome, canceledIncome,
+                promoterExpenses, fixedExpenses, variableExpenses, totalExpenses, discounts, realResult, expectedResult);
     }
 
-    public String buildIncomeReport(LocalDate start, LocalDate end) {
+    @GetMapping("/income")
+    public IncomeReport getIncomeReport(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+
         validatePeriod(start, end);
 
-        List<InvoiceView> invoicesByDueDate = invoiceDAO.findViewByPeriod(start, end);
-        List<InvoiceView> receivedInvoices = invoiceDAO.findViewByPaymentPeriod(start, end);
+        List<Invoice> invoices = invoiceRepository.findAll();
+        Map<Integer, Client> clientsById = clientRepository.findAll().stream()
+                .collect(Collectors.toMap(Client::getId, c -> c));
 
-        BigDecimal expectedIncome = invoiceDAO.getTotalExpectedByDueDatePeriod(start, end);
-        BigDecimal issuedIncome = invoiceDAO.getTotalIssuedByIssuePeriod(start, end);
-        BigDecimal receivedIncome = invoiceDAO.getTotalPaidByPaymentPeriod(start, end);
-        BigDecimal openIncome = invoiceDAO.getTotalOpenByDueDatePeriod(start, end);
+        List<InvoiceLine> invoicesByDueDate = invoices.stream()
+                .filter(i -> i.getDueDate() != null && !i.getDueDate().isBefore(start) && !i.getDueDate().isAfter(end))
+                .sorted(Comparator.comparing(Invoice::getDueDate))
+                .map(i -> toInvoiceLine(i, clientsById))
+                .toList();
 
-        StringBuilder report = new StringBuilder();
+        List<InvoiceLine> receivedInvoices = invoices.stream()
+                .filter(i -> "PAGO".equalsIgnoreCase(i.getStatus())
+                        && i.getPaymentDate() != null
+                        && !i.getPaymentDate().isBefore(start)
+                        && !i.getPaymentDate().isAfter(end))
+                .sorted(Comparator.comparing(Invoice::getPaymentDate))
+                .map(i -> toInvoiceLine(i, clientsById))
+                .toList();
 
-        appendHeader(report, "ENTRADAS E RECEBIMENTOS", start, end);
+        BigDecimal expectedIncome = totalExpectedByDueDate(invoices, start, end);
+        BigDecimal issuedIncome = totalIssuedByIssueDate(invoices, start, end);
+        BigDecimal receivedIncome = totalPaidByPaymentDate(invoices, start, end);
+        BigDecimal openIncome = totalOpenByDueDate(invoices, start, end);
 
-        appendSection(report, "RESUMO");
-        appendMetric(report, "Previsto por vencimento", expectedIncome);
-        appendMetric(report, "Emitido no período", issuedIncome);
-        appendMetric(report, "Recebido no período", receivedIncome);
-        appendMetric(report, "Ainda a receber", openIncome);
-
-        appendSection(report, "FATURAMENTOS COM VENCIMENTO NO PERÍODO");
-        appendInvoiceList(report, invoicesByDueDate);
-
-        appendSection(report, "RECEBIMENTOS CONFIRMADOS NO PERÍODO");
-        appendInvoiceList(report, receivedInvoices);
-
-        return report.toString();
+        return new IncomeReport(expectedIncome, issuedIncome, receivedIncome, openIncome, invoicesByDueDate, receivedInvoices);
     }
 
-    public String buildExpenseReport(LocalDate start, LocalDate end) {
+    @GetMapping("/expenses")
+    public ExpenseReport getExpenseReport(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+
         validatePeriod(start, end);
 
-        List<String> promoterLines = financePromoterDAO.findByPeriodWithPromoterName(start, end);
-        List<String> discountLines = financePromoterDAO.findDiscountsByPeriodWithPromoterName(start, end);
-        List<FixedExpenseHistory> fixedExpenses = fixedExpenseHistoryDAO.findByPeriod(start, end);
-        List<VariableExpense> variableExpenses = variableExpenseDAO.findByPeriod(start, end);
+        Map<Integer, Promoter> promotersById = promoterRepository.findAll().stream()
+                .collect(Collectors.toMap(Promoter::getId, p -> p));
 
-        Map<String, BigDecimal> promoterTotals = financePromoterDAO.getTotalByTypeAndPeriod(start, end);
+        List<FinancePromoter> finances = financePromoterRepository.findAll();
+
+        List<PromoterFinanceLine> promoterPayments = finances.stream()
+                .filter(f -> !"DESCONTO".equalsIgnoreCase(f.getType()))
+                .filter(f -> f.getDate() != null && !f.getDate().isBefore(start) && !f.getDate().isAfter(end))
+                .sorted(Comparator.comparing(FinancePromoter::getDate).reversed())
+                .map(f -> toFinanceLine(f, promotersById))
+                .toList();
+
+        List<PromoterFinanceLine> discountEntries = finances.stream()
+                .filter(f -> "DESCONTO".equalsIgnoreCase(f.getType()))
+                .filter(f -> f.getDate() != null && !f.getDate().isBefore(start) && !f.getDate().isAfter(end))
+                .sorted(Comparator.comparing(FinancePromoter::getDate).reversed())
+                .map(f -> toFinanceLine(f, promotersById))
+                .toList();
+
+        List<FixedExpenseHistory> fixedExpenseHistory = fixedExpenseHistoryRepository.findAll().stream()
+                .filter(e -> e.getDueDate() != null && !e.getDueDate().isBefore(start) && !e.getDueDate().isAfter(end))
+                .toList();
+
+        List<VariableExpense> variableExpenseList = variableExpenseRepository.findAll().stream()
+                .filter(e -> e.getDate() != null && !e.getDate().isBefore(start) && !e.getDate().isAfter(end))
+                .toList();
+
+        Map<String, BigDecimal> promoterTotals = totalByTypeAndPeriod(finances, start, end);
 
         BigDecimal promoterExpenses = calculatePromoterExpenses(promoterTotals);
         BigDecimal fixedTotal = calculateFixedExpenses(start, end);
@@ -129,113 +156,102 @@ public class ReportController {
         BigDecimal discounts = promoterTotals.getOrDefault("DESCONTO", BigDecimal.ZERO);
         BigDecimal totalExpenses = promoterExpenses.add(fixedTotal).add(variableTotal);
 
-        StringBuilder report = new StringBuilder();
-
-        appendHeader(report, "SAÍDAS E GASTOS", start, end);
-
-        appendSection(report, "RESUMO");
-        appendMetric(report, "Promotores", promoterExpenses);
-        appendMetric(report, "Despesas fixas", fixedTotal);
-        appendMetric(report, "Despesas variáveis", variableTotal);
-        appendMetric(report, "Total de saídas", totalExpenses);
-        appendMetric(report, "Descontos aplicados", discounts);
-
-        appendSection(report, "PAGAMENTOS A PROMOTORES");
-        if (promoterLines.isEmpty()) {
-            report.append("Nenhum pagamento de promotor encontrado.\n");
-        } else {
-            for (String line : promoterLines) {
-                report.append("- ").append(line).append("\n");
-            }
-        }
-
-        appendSection(report, "DESCONTOS APLICADOS NA FOLHA");
-        if (discountLines.isEmpty()) {
-            report.append("Nenhum desconto aplicado encontrado.\n");
-        } else {
-            for (String line : discountLines) {
-                report.append("- ").append(line).append("\n");
-            }
-        }
-
-        appendSection(report, "DESPESAS FIXAS");
-        if (fixedExpenses.isEmpty()) {
-            report.append("Nenhuma despesa fixa encontrada.\n");
-        } else {
-            for (FixedExpenseHistory expense : fixedExpenses) {
-                report.append(String.format(
-                        "- %-28s %12s | Vencimento: %-10s | Status: %s%n",
-                        limit(expense.getName(), 28),
-                        formatMoney(expense.getAmount()),
-                        formatDate(expense.getDueDate()),
-                        safe(expense.getStatus())
-                ));
-            }
-        }
-
-        appendSection(report, "DESPESAS VARIÁVEIS");
-        if (variableExpenses.isEmpty()) {
-            report.append("Nenhuma despesa variável encontrada.\n");
-        } else {
-            for (VariableExpense expense : variableExpenses) {
-                report.append(String.format(
-                        "- %-28s %12s | Data: %-10s | Status: %s%n",
-                        limit(expense.getName(), 28),
-                        formatMoney(expense.getAmount()),
-                        formatDate(expense.getDate()),
-                        expense.isStatus() ? "PAGO" : "PENDENTE"
-                ));
-            }
-        }
-
-        return report.toString();
+        return new ExpenseReport(promoterExpenses, fixedTotal, variableTotal, totalExpenses, discounts,
+                promoterPayments, discountEntries, fixedExpenseHistory, variableExpenseList);
     }
 
-    public String buildTypeReport(LocalDate start, LocalDate end) {
+    @GetMapping("/by-type")
+    public TypeReport getTypeReport(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+
         validatePeriod(start, end);
 
-        BigDecimal expectedIncome = invoiceDAO.getTotalExpectedByDueDatePeriod(start, end);
-        BigDecimal issuedIncome = invoiceDAO.getTotalIssuedByIssuePeriod(start, end);
-        BigDecimal receivedIncome = invoiceDAO.getTotalPaidByPaymentPeriod(start, end);
-        BigDecimal openIncome = invoiceDAO.getTotalOpenByDueDatePeriod(start, end);
-        BigDecimal canceledIncome = invoiceDAO.getTotalCanceledByDueDatePeriod(start, end);
+        List<Invoice> invoices = invoiceRepository.findAll();
+        List<FinancePromoter> finances = financePromoterRepository.findAll();
 
-        Map<String, BigDecimal> promoterTotals = financePromoterDAO.getTotalByTypeAndPeriod(start, end);
-        Map<String, BigDecimal> companyTotals = invoiceDAO.getTotalByCompanyAndDueDatePeriod(start, end);
+        BigDecimal expectedIncome = totalExpectedByDueDate(invoices, start, end);
+        BigDecimal issuedIncome = totalIssuedByIssueDate(invoices, start, end);
+        BigDecimal receivedIncome = totalPaidByPaymentDate(invoices, start, end);
+        BigDecimal openIncome = totalOpenByDueDate(invoices, start, end);
+        BigDecimal canceledIncome = totalCanceledByDueDate(invoices, start, end);
 
-        StringBuilder report = new StringBuilder();
+        Map<String, BigDecimal> promoterTotals = totalByTypeAndPeriod(finances, start, end);
+        Map<String, BigDecimal> companyTotals = totalByCompanyAndDueDate(invoices, start, end);
 
-        appendHeader(report, "VISÃO ESPECÍFICA POR TIPO", start, end);
+        return new TypeReport(expectedIncome, issuedIncome, receivedIncome, openIncome, canceledIncome,
+                companyTotals, promoterTotals, calculateFixedExpenses(start, end), calculateVariableExpenses(start, end));
+    }
 
-        appendSection(report, "ENTRADAS E RECEBIMENTOS");
-        appendMetric(report, "Previsto por vencimento", expectedIncome);
-        appendMetric(report, "Faturado no período", issuedIncome);
-        appendMetric(report, "Recebido no período", receivedIncome);
-        appendMetric(report, "A receber", openIncome);
-        appendMetric(report, "Cancelado", canceledIncome);
+    private BigDecimal totalExpectedByDueDate(List<Invoice> invoices, LocalDate start, LocalDate end) {
+        return invoices.stream()
+                .filter(i -> i.getDueDate() != null && !i.getDueDate().isBefore(start) && !i.getDueDate().isAfter(end))
+                .filter(i -> !"CANCELADO".equalsIgnoreCase(i.getStatus()))
+                .map(Invoice::getAmount)
+                .reduce(BigDecimal.ZERO, this::add);
+    }
 
-        appendSection(report, "ENTRADAS POR VÍNCULO");
-        appendMetric(report, "AT", companyTotals.getOrDefault("AT", BigDecimal.ZERO));
-        appendMetric(report, "TEJO", companyTotals.getOrDefault("TEJO", BigDecimal.ZERO));
+    private BigDecimal totalOpenByDueDate(List<Invoice> invoices, LocalDate start, LocalDate end) {
+        return invoices.stream()
+                .filter(i -> i.getDueDate() != null && !i.getDueDate().isBefore(start) && !i.getDueDate().isAfter(end))
+                .filter(i -> "PENDENTE".equalsIgnoreCase(i.getStatus()) || "FATURADO".equalsIgnoreCase(i.getStatus()))
+                .map(Invoice::getAmount)
+                .reduce(BigDecimal.ZERO, this::add);
+    }
 
-        appendSection(report, "SAÍDAS POR TIPO");
-        appendMetric(report, "Bonificação", promoterTotals.getOrDefault("BONIFICACAO", BigDecimal.ZERO));
-        appendMetric(report, "Ajuda de custo", promoterTotals.getOrDefault("AJUDA_CUSTO", BigDecimal.ZERO));
-        appendMetric(report, "ASO", promoterTotals.getOrDefault("ASO", BigDecimal.ZERO));
-        appendMetric(report, "EPI", promoterTotals.getOrDefault("EPI", BigDecimal.ZERO));
-        appendMetric(report, "Rescisão", promoterTotals.getOrDefault("RESCISAO", BigDecimal.ZERO));
-        appendMetric(report, "Férias", promoterTotals.getOrDefault("FERIAS", BigDecimal.ZERO));
-        appendMetric(report, "Adiantamento", promoterTotals.getOrDefault("ADIANTAMENTO", BigDecimal.ZERO));
-        appendMetric(report, "Reembolso", promoterTotals.getOrDefault("REEMBOLSO", BigDecimal.ZERO));
-        appendMetric(report, "Correção de pagamento", promoterTotals.getOrDefault("CORRECAO_PAGAMENTO", BigDecimal.ZERO));
-        appendMetric(report, "Outros", promoterTotals.getOrDefault("OUTROS", BigDecimal.ZERO));
-        appendMetric(report, "Desconto", promoterTotals.getOrDefault("DESCONTO", BigDecimal.ZERO));
+    private BigDecimal totalIssuedByIssueDate(List<Invoice> invoices, LocalDate start, LocalDate end) {
+        return invoices.stream()
+                .filter(i -> i.getIssueDate() != null && !i.getIssueDate().isBefore(start) && !i.getIssueDate().isAfter(end))
+                .filter(i -> "FATURADO".equalsIgnoreCase(i.getStatus()) || "PAGO".equalsIgnoreCase(i.getStatus()))
+                .map(Invoice::getAmount)
+                .reduce(BigDecimal.ZERO, this::add);
+    }
 
-        appendSection(report, "OUTRAS SAÍDAS");
-        appendMetric(report, "Despesas fixas", calculateFixedExpenses(start, end));
-        appendMetric(report, "Despesas variáveis", calculateVariableExpenses(start, end));
+    private BigDecimal totalPaidByPaymentDate(List<Invoice> invoices, LocalDate start, LocalDate end) {
+        return invoices.stream()
+                .filter(i -> i.getPaymentDate() != null && !i.getPaymentDate().isBefore(start) && !i.getPaymentDate().isAfter(end))
+                .filter(i -> "PAGO".equalsIgnoreCase(i.getStatus()))
+                .map(i -> i.getReceivedAmount() != null ? i.getReceivedAmount() : i.getAmount())
+                .reduce(BigDecimal.ZERO, this::add);
+    }
 
-        return report.toString();
+    private BigDecimal totalCanceledByDueDate(List<Invoice> invoices, LocalDate start, LocalDate end) {
+        return invoices.stream()
+                .filter(i -> i.getDueDate() != null && !i.getDueDate().isBefore(start) && !i.getDueDate().isAfter(end))
+                .filter(i -> "CANCELADO".equalsIgnoreCase(i.getStatus()))
+                .map(Invoice::getAmount)
+                .reduce(BigDecimal.ZERO, this::add);
+    }
+
+    private Map<String, BigDecimal> totalByCompanyAndDueDate(List<Invoice> invoices, LocalDate start, LocalDate end) {
+        Map<Integer, Client> clientsById = clientRepository.findAll().stream()
+                .collect(Collectors.toMap(Client::getId, c -> c));
+
+        Map<String, BigDecimal> totals = new HashMap<>();
+
+        for (Invoice invoice : invoices) {
+            if (invoice.getDueDate() == null || invoice.getDueDate().isBefore(start) || invoice.getDueDate().isAfter(end)) continue;
+            if ("CANCELADO".equalsIgnoreCase(invoice.getStatus())) continue;
+
+            Client client = clientsById.get(invoice.getClientId());
+            String companyLink = client != null ? client.getCompanyLink() : "N/A";
+
+            totals.merge(companyLink, nullToZero(invoice.getAmount()), BigDecimal::add);
+        }
+
+        return totals;
+    }
+
+    private Map<String, BigDecimal> totalByTypeAndPeriod(List<FinancePromoter> finances, LocalDate start, LocalDate end) {
+        Map<String, BigDecimal> totals = new HashMap<>();
+
+        for (FinancePromoter finance : finances) {
+            if (finance.getDate() == null || finance.getDate().isBefore(start) || finance.getDate().isAfter(end)) continue;
+
+            totals.merge(finance.getType(), nullToZero(finance.getAmount()), BigDecimal::add);
+        }
+
+        return totals;
     }
 
     private BigDecimal calculatePromoterExpenses(Map<String, BigDecimal> totals) {
@@ -253,8 +269,9 @@ public class ReportController {
     private BigDecimal calculateFixedExpenses(LocalDate start, LocalDate end) {
         BigDecimal total = BigDecimal.ZERO;
 
-        for (FixedExpenseHistory expense : fixedExpenseHistoryDAO.findByPeriod(start, end)) {
-            if ("PAGO".equalsIgnoreCase(safe(expense.getStatus()))) {
+        for (FixedExpenseHistory expense : fixedExpenseHistoryRepository.findAll()) {
+            if (expense.getDueDate() == null || expense.getDueDate().isBefore(start) || expense.getDueDate().isAfter(end)) continue;
+            if ("PAGO".equalsIgnoreCase(expense.getStatus())) {
                 total = total.add(nullToZero(expense.getAmount()));
             }
         }
@@ -265,7 +282,8 @@ public class ReportController {
     private BigDecimal calculateVariableExpenses(LocalDate start, LocalDate end) {
         BigDecimal total = BigDecimal.ZERO;
 
-        for (VariableExpense expense : variableExpenseDAO.findByPeriod(start, end)) {
+        for (VariableExpense expense : variableExpenseRepository.findAll()) {
+            if (expense.getDate() == null || expense.getDate().isBefore(start) || expense.getDate().isAfter(end)) continue;
             if (expense.isStatus()) {
                 total = total.add(nullToZero(expense.getAmount()));
             }
@@ -274,56 +292,35 @@ public class ReportController {
         return total;
     }
 
-    private void appendHeader(StringBuilder report, String title, LocalDate start, LocalDate end) {
-        report.append("============================================================\n");
-        report.append(centerText(title, 60)).append("\n");
-        report.append("============================================================\n\n");
-        report.append("Período analisado : ")
-                .append(formatDate(start))
-                .append(" até ")
-                .append(formatDate(end))
-                .append("\n");
-        report.append("Gerado em         : ")
-                .append(formatDate(LocalDate.now()))
-                .append("\n");
+    private InvoiceLine toInvoiceLine(Invoice invoice, Map<Integer, Client> clientsById) {
+        Client client = clientsById.get(invoice.getClientId());
+
+        return new InvoiceLine(
+                invoice.getId(),
+                client != null ? client.getName() : null,
+                client != null ? client.getCompanyLink() : null,
+                invoice.getAmount(),
+                invoice.getReceivedAmount(),
+                invoice.getDescription(),
+                invoice.getDueDate(),
+                invoice.getIssueDate(),
+                invoice.getPaymentDate(),
+                invoice.getStatus()
+        );
     }
 
-    private void appendSection(StringBuilder report, String title) {
-        report.append("\n------------------------------------------------------------\n");
-        report.append(title).append("\n");
-        report.append("------------------------------------------------------------\n");
-    }
+    private PromoterFinanceLine toFinanceLine(FinancePromoter finance, Map<Integer, Promoter> promotersById) {
+        Promoter promoter = promotersById.get(finance.getIdPromoter());
 
-    private void appendMetric(StringBuilder report, String label, BigDecimal value) {
-        report.append(String.format("%-36s %15s%n", label + ":", formatMoney(value)));
-    }
-
-    private void appendInvoiceList(StringBuilder report, List<InvoiceView> invoices) {
-        if (invoices.isEmpty()) {
-            report.append("Nenhum faturamento encontrado.\n");
-            return;
-        }
-
-        report.append(String.format(
-                "%-5s %-24s %-6s %12s %-11s %-11s %-11s %-10s%n",
-                "ID", "Cliente", "Vínc.", "Valor", "Previsto", "Faturado", "Pago", "Status"
-        ));
-
-        report.append("------------------------------------------------------------------------------------------\n");
-
-        for (InvoiceView invoice : invoices) {
-            report.append(String.format(
-                    "%-5d %-24s %-6s %12s %-11s %-11s %-11s %-10s%n",
-                    invoice.getId(),
-                    limit(invoice.getClientName(), 24),
-                    safe(invoice.getCompanyLink()),
-                    formatMoney(invoice.getAmount()),
-                    formatDate(invoice.getDueDate()),
-                    formatDate(invoice.getIssueDate()),
-                    formatDate(invoice.getPaymentDate()),
-                    safe(invoice.getStatus())
-            ));
-        }
+        return new PromoterFinanceLine(
+                finance.getId(),
+                promoter != null ? promoter.getName() : null,
+                finance.getType(),
+                finance.getAmount(),
+                finance.getDate(),
+                finance.getStatus(),
+                finance.getDescription()
+        );
     }
 
     private void validatePeriod(LocalDate start, LocalDate end) {
@@ -336,43 +333,82 @@ public class ReportController {
         }
     }
 
-    private String formatMoney(BigDecimal value) {
-        BigDecimal safeValue = nullToZero(value).setScale(2, RoundingMode.HALF_UP);
-
-        NumberFormat moneyFormat = NumberFormat.getCurrencyInstance(new Locale("pt", "BR"));
-
-        return moneyFormat.format(safeValue)
-                .replace('\u00A0', ' ');
-    }
-
     private BigDecimal nullToZero(BigDecimal value) {
         return value != null ? value : BigDecimal.ZERO;
     }
 
-    private String formatDate(LocalDate date) {
-        return date != null ? date.format(formatter) : "-";
+    private BigDecimal add(BigDecimal a, BigDecimal b) {
+        return a.add(nullToZero(b));
     }
 
-    private String safe(String value) {
-        return value != null ? value : "";
-    }
+    public record GeneralReport(
+            BigDecimal expectedIncome,
+            BigDecimal issuedIncome,
+            BigDecimal receivedIncome,
+            BigDecimal openIncome,
+            BigDecimal canceledIncome,
+            BigDecimal promoterExpenses,
+            BigDecimal fixedExpenses,
+            BigDecimal variableExpenses,
+            BigDecimal totalExpenses,
+            BigDecimal discounts,
+            BigDecimal realResult,
+            BigDecimal expectedResult
+    ) {}
 
-    private String limit(String value, int maxLength) {
-        String safeValue = safe(value);
+    public record IncomeReport(
+            BigDecimal expectedIncome,
+            BigDecimal issuedIncome,
+            BigDecimal receivedIncome,
+            BigDecimal openIncome,
+            List<InvoiceLine> invoicesByDueDate,
+            List<InvoiceLine> receivedInvoices
+    ) {}
 
-        if (safeValue.length() <= maxLength) {
-            return safeValue;
-        }
+    public record ExpenseReport(
+            BigDecimal promoterExpenses,
+            BigDecimal fixedExpenses,
+            BigDecimal variableExpenses,
+            BigDecimal totalExpenses,
+            BigDecimal discounts,
+            List<PromoterFinanceLine> promoterPayments,
+            List<PromoterFinanceLine> discountEntries,
+            List<FixedExpenseHistory> fixedExpenseHistory,
+            List<VariableExpense> variableExpenseList
+    ) {}
 
-        return safeValue.substring(0, maxLength - 3) + "...";
-    }
+    public record TypeReport(
+            BigDecimal expectedIncome,
+            BigDecimal issuedIncome,
+            BigDecimal receivedIncome,
+            BigDecimal openIncome,
+            BigDecimal canceledIncome,
+            Map<String, BigDecimal> incomeByCompany,
+            Map<String, BigDecimal> expensesByType,
+            BigDecimal fixedExpenses,
+            BigDecimal variableExpenses
+    ) {}
 
-    private String centerText(String text, int width) {
-        if (text.length() >= width) {
-            return text;
-        }
+    public record InvoiceLine(
+            Integer id,
+            String clientName,
+            String companyLink,
+            BigDecimal amount,
+            BigDecimal receivedAmount,
+            String description,
+            LocalDate dueDate,
+            LocalDate issueDate,
+            LocalDate paymentDate,
+            String status
+    ) {}
 
-        int leftPadding = (width - text.length()) / 2;
-        return " ".repeat(leftPadding) + text;
-    }
+    public record PromoterFinanceLine(
+            Integer id,
+            String promoterName,
+            String type,
+            BigDecimal amount,
+            LocalDate date,
+            String status,
+            String description
+    ) {}
 }
