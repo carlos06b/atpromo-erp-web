@@ -8,6 +8,7 @@ public class PayrollLine {
     private String promoterName;
     private String promoterType;
     private BigDecimal baseSalary;
+    private BigDecimal bonuses;
     private BigDecimal discounts;
     private BigDecimal netAmount;
     private String status;
@@ -21,6 +22,7 @@ public class PayrollLine {
             String promoterName,
             String promoterType,
             BigDecimal baseSalary,
+            BigDecimal bonuses,
             BigDecimal discounts,
             BigDecimal netAmount,
             String status,
@@ -30,6 +32,7 @@ public class PayrollLine {
         this.promoterName = promoterName;
         this.promoterType = promoterType;
         this.baseSalary = baseSalary;
+        this.bonuses = bonuses;
         this.discounts = discounts;
         this.netAmount = netAmount;
         this.status = status;
@@ -66,6 +69,14 @@ public class PayrollLine {
 
     public void setBaseSalary(BigDecimal baseSalary) {
         this.baseSalary = baseSalary;
+    }
+
+    public BigDecimal getBonuses() {
+        return bonuses;
+    }
+
+    public void setBonuses(BigDecimal bonuses) {
+        this.bonuses = bonuses;
     }
 
     public BigDecimal getDiscounts() {

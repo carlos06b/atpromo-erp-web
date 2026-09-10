@@ -3,6 +3,7 @@ import Login from "./pages/Login";
 import Promotores from "./pages/Promotores";
 import Clientes from "./pages/Clientes";
 import Faturamento from "./pages/Faturamento";
+import FolhaDePagamento from "./pages/FolhaDePagamento";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -30,6 +31,14 @@ function App() {
                 element={
                     <ProtectedRoute>
                         <Faturamento />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/folha-pagamento"
+                element={
+                    <ProtectedRoute>
+                        <FolhaDePagamento />
                     </ProtectedRoute>
                 }
             />

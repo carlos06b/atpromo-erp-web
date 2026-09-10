@@ -5,6 +5,7 @@ const navItems = [
     { to: "/promotores", label: "Promotores" },
     { to: "/clientes", label: "Clientes" },
     { to: "/faturamento", label: "Faturamento" },
+    { to: "/folha-pagamento", label: "Folha de pagamento" },
 ];
 
 export default function Layout({ title, children }) {

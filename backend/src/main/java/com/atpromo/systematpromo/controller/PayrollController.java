@@ -57,14 +57,20 @@ public class PayrollController {
                     .toList();
 
             BigDecimal discounts = BigDecimal.ZERO;
+            BigDecimal bonuses = BigDecimal.ZERO;
             for (FinancePromoter finance : launches) {
-                if ("DESCONTO".equalsIgnoreCase(finance.getType()) && finance.getAmount() != null) {
+                if (finance.getAmount() == null) {
+                    continue;
+                }
+                if ("DESCONTO".equalsIgnoreCase(finance.getType())) {
                     discounts = discounts.add(finance.getAmount());
+                } else if ("BONUS".equalsIgnoreCase(finance.getType())) {
+                    bonuses = bonuses.add(finance.getAmount());
                 }
             }
 
             BigDecimal baseSalary = promoter.getSalary() != null ? promoter.getSalary() : BigDecimal.ZERO;
-            BigDecimal netAmount = baseSalary.subtract(discounts);
+            BigDecimal netAmount = baseSalary.add(bonuses).subtract(discounts);
 
             String status = "OK";
             String observation = "Conferido";
@@ -74,7 +80,7 @@ public class PayrollController {
                 observation = "Promotor sem salario/base cadastrado";
             } else if (netAmount.compareTo(BigDecimal.ZERO) < 0) {
                 status = "ATENCAO";
-                observation = "Descontos maiores que o salario/base";
+                observation = "Descontos maiores que o salario/base e bonus";
             }
 
             lines.add(new PayrollLine(
@@ -82,6 +88,7 @@ public class PayrollController {
                     promoter.getName(),
                     promoter.getType(),
                     baseSalary,
+                    bonuses,
                     discounts,
                     netAmount,
                     status,
