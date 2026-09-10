@@ -1,0 +1,192 @@
+.fat-calendar {
+    display: flex;
+    flex-direction: column;
+}
+
+.fat-calendar .rbc-calendar {
+    font-family: inherit;
+    flex: 1;
+}
+
+.fat-calendar button {
+    font: inherit;
+    cursor: pointer;
+}
+
+/* Month / week / agenda outer frame */
+.fat-calendar .rbc-month-view,
+.fat-calendar .rbc-time-view,
+.fat-calendar .rbc-agenda-view {
+    border: 1px solid #e5e5e5;
+    border-radius: 0.75rem;
+    overflow: hidden;
+}
+
+/* Column headers (weekday names) */
+.fat-calendar .rbc-header {
+    background: #000000;
+    color: #ffffff;
+    padding: 0.6rem 0;
+    font-weight: 500;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    border-color: #262626;
+}
+
+.fat-calendar .rbc-header + .rbc-header {
+    border-left-color: #262626;
+}
+
+/* Grid lines */
+.fat-calendar .rbc-month-row + .rbc-month-row {
+    border-color: #e5e5e5;
+}
+
+.fat-calendar .rbc-day-bg + .rbc-day-bg {
+    border-color: #e5e5e5;
+}
+
+.fat-calendar .rbc-off-range-bg {
+    background-color: #fafafa;
+}
+
+.fat-calendar .rbc-off-range {
+    color: #c4c4c4;
+}
+
+.fat-calendar .rbc-today {
+    background-color: #fff7ed;
+}
+
+/* Date numbers in month cells */
+.fat-calendar .rbc-date-cell {
+    padding: 4px 8px;
+    text-align: right;
+    font-size: 0.8rem;
+    color: #404040;
+}
+
+.fat-calendar .rbc-date-cell.rbc-now {
+    font-weight: 700;
+}
+
+.fat-calendar .rbc-date-cell button {
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    font: inherit;
+}
+
+.fat-calendar .rbc-date-cell.rbc-now button {
+    color: #ea580c;
+}
+
+/* Events */
+.fat-calendar .rbc-event {
+    border: none;
+    padding: 2px 6px;
+}
+
+.fat-calendar .rbc-event.rbc-selected {
+    box-shadow: 0 0 0 2px #111111;
+}
+
+.fat-calendar .rbc-event:focus {
+    outline: 2px solid #f97316;
+    outline-offset: 1px;
+}
+
+.fat-calendar .rbc-row-segment .rbc-event-content {
+    font-size: 0.75rem;
+}
+
+/* "+X mais" link */
+.fat-calendar .rbc-show-more {
+    background: transparent;
+    color: #ea580c;
+    font-weight: 600;
+    font-size: 0.75rem;
+    padding: 2px 4px;
+}
+
+.fat-calendar .rbc-show-more:hover {
+    text-decoration: underline;
+}
+
+/* Popup for "+X mais" */
+.fat-calendar .rbc-overlay {
+    border-radius: 0.75rem;
+    border: 1px solid #e5e5e5;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    padding: 0.75rem;
+    background: #ffffff;
+}
+
+.fat-calendar .rbc-overlay-header {
+    font-weight: 600;
+    color: #111111;
+    border-bottom: 1px solid #e5e5e5;
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Week / day time grid */
+.fat-calendar .rbc-time-header-content,
+.fat-calendar .rbc-time-content,
+.fat-calendar .rbc-time-header.rbc-overflowing {
+    border-color: #e5e5e5;
+}
+
+.fat-calendar .rbc-timeslot-group {
+    border-color: #f0f0f0;
+}
+
+.fat-calendar .rbc-time-slot {
+    color: #a3a3a3;
+    font-size: 0.75rem;
+}
+
+.fat-calendar .rbc-current-time-indicator {
+    background-color: #f97316;
+    height: 2px;
+}
+
+.fat-calendar .rbc-allday-cell {
+    background: #fafafa;
+}
+
+.fat-calendar .rbc-time-gutter .rbc-timeslot-group {
+    padding-right: 6px;
+}
+
+/* Agenda view */
+.fat-calendar .rbc-agenda-view table.rbc-agenda-table {
+    border: none;
+}
+
+.fat-calendar .rbc-agenda-table thead > tr > th {
+    background: #000000;
+    color: #ffffff;
+    padding: 0.6rem 0.75rem;
+    font-weight: 500;
+    border: none;
+    text-align: left;
+}
+
+.fat-calendar .rbc-agenda-table tbody > tr > td {
+    border-color: #e5e5e5;
+    padding: 0.6rem 0.75rem;
+}
+
+.fat-calendar .rbc-agenda-date-cell,
+.fat-calendar .rbc-agenda-time-cell {
+    color: #525252;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.fat-calendar .rbc-agenda-event-cell {
+    color: #111111;
+}

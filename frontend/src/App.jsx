@@ -1,6 +1,8 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Promotores from "./pages/Promotores";
+import Clientes from "./pages/Clientes";
+import Faturamento from "./pages/Faturamento";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -12,6 +14,22 @@ function App() {
                 element={
                     <ProtectedRoute>
                         <Promotores />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/clientes"
+                element={
+                    <ProtectedRoute>
+                        <Clientes />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/faturamento"
+                element={
+                    <ProtectedRoute>
+                        <Faturamento />
                     </ProtectedRoute>
                 }
             />
