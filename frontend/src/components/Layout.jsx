@@ -6,10 +6,18 @@ const navItems = [
     { to: "/clientes", label: "Clientes" },
     { to: "/faturamento", label: "Faturamento" },
     { to: "/folha-pagamento", label: "Folha de pagamento" },
+    { to: "/despesas", label: "Despesas" },
 ];
 
+function getInitials(name) {
+    if (!name) return "?";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
 export default function Layout({ title, children }) {
-    const { logout } = useAuth();
+    const { logout, userName, jobTittle } = useAuth();
 
     return (
         <div className="flex h-screen w-screen bg-neutral-100 text-neutral-800">
@@ -39,7 +47,17 @@ export default function Layout({ title, children }) {
                     ))}
                 </nav>
 
-                <div className="border-t border-neutral-800 p-3">
+                <div className="border-t border-neutral-800 p-3 space-y-3">
+                    <div className="flex items-center gap-3 px-1">
+                        <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-orange-500 text-sm font-bold text-black">
+                            {getInitials(userName)}
+                        </div>
+                        <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-white">{userName || "Usuário"}</p>
+                            {jobTittle && <p className="truncate text-xs text-neutral-400">{jobTittle}</p>}
+                        </div>
+                    </div>
+
                     <button
                         onClick={logout}
                         className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-neutral-300 hover:bg-neutral-800 hover:text-orange-400"

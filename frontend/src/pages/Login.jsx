@@ -23,7 +23,7 @@ export default function Login() {
                 body: { email, password },
             });
 
-            login(data.token);
+            login(data.token, data.name, data.jobTittle);
             navigate("/promotores");
         } catch (err) {
             setError("Email ou senha inválidos.");

@@ -20,15 +20,16 @@ export async function apiFetch(path, { method = "GET", body, token } = {}) {
             const data = await response.json();
             message = data.message || message;
         } catch (e) {
-            // resposta sem corpo JSON, ignora
         }
 
         throw new Error(message);
     }
 
-    if (response.status === 204) {
+    const text = await response.text();
+
+    if (!text) {
         return null;
     }
 
-    return response.json();
+    return JSON.parse(text);
 }
