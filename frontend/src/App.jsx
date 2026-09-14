@@ -6,6 +6,7 @@ import Faturamento from "./pages/Faturamento";
 import FolhaDePagamento from "./pages/FolhaDePagamento";
 import Despesas from "./pages/Despesas";
 import Relatorios from "./pages/Relatorios";
+import Solicitacoes from "./pages/Solicitacoes";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -57,6 +58,14 @@ function App() {
                 element={
                     <ProtectedRoute>
                         <Relatorios />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/solicitacoes"
+                element={
+                    <ProtectedRoute>
+                        <Solicitacoes />
                     </ProtectedRoute>
                 }
             />

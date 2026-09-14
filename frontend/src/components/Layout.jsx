@@ -8,6 +8,7 @@ const navItems = [
     { to: "/folha-pagamento", label: "Folha de pagamento" },
     { to: "/despesas", label: "Despesas" },
     { to: "/relatorios", label: "Relatórios" },
+    { to: "/solicitacoes", label: "Solicitações" },
 ];
 
 function getInitials(name) {

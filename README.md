@@ -19,13 +19,16 @@ atpromo-erp-web/
 - Cadastro de clientes/indústrias
 - Faturamento, com visão em lista e em calendário (por vencimento, emissão e pagamento, coloridos por status)
 - Folha de pagamento: lançamento de descontos e bônus por promotor (com busca pelo nome), fechamento do período com cálculo automático do líquido, e geração de lote Pix para promotores MEI
+- Despesas fixas (com geração do próximo mês e histórico) e despesas variáveis (com parcelamento automático)
+- Relatórios financeiros: resumo do período com resultado real e previsto, detalhamento de faturamento e de despesas, por período personalizável
+- Solicitações de pagamento via Pix: RH cria a solicitação para um promotor, Financeiro aprova (o que já lança automaticamente no financeiro do promotor) ou rejeita, com exportação de lote Pix das solicitações pendentes
+- Identificação do usuário logado (nome e cargo) na barra lateral
 - Busca e filtros em todos os cadastros
 - Exclusão protegida por senha em todos os cadastros, com aviso sobre o impacto em relatórios e históricos
 
-## Funcionalidades pendentes de migração
+## Funcionalidades pendentes
 
-- Despesas fixas e variáveis
-- Dashboard e relatórios financeiros (endpoints da API já prontos, tela ainda não construída)
+Nenhuma pendência conhecida no momento. Todos os módulos do sistema antigo já foram migrados, incluindo o fluxo de Solicitações de Pix.
 
 ## Tecnologias
 

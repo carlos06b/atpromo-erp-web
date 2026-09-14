@@ -18,7 +18,7 @@ public class Request {
     private int id_UserRH;
 
     @Column(name = "id_userFIN")
-    private int id_UserFin;
+    private Integer id_UserFin;
 
     @Column(name = "id_promoter")
     private int id_Promoter;
@@ -38,7 +38,7 @@ public class Request {
     @Column(name = "amount")
     private BigDecimal amount;
 
-    public Request(Integer id, int id_UserRH, int id_UserFin, int id_Promoter, String type, BigDecimal amount, String message, String status, LocalDateTime date) {
+    public Request(Integer id, int id_UserRH, Integer id_UserFin, int id_Promoter, String type, BigDecimal amount, String message, String status, LocalDateTime date) {
         this.id = id;
         this.id_UserRH = id_UserRH;
         this.id_UserFin = id_UserFin;
@@ -68,8 +68,8 @@ public class Request {
     public int getId_Promoter() { return id_Promoter; }
     public void setId_Promoter(int id_Promoter) { this.id_Promoter = id_Promoter; }
 
-    public int getId_UserFin() { return id_UserFin; }
-    public void setId_UserFin(int id_UserFin) { this.id_UserFin = id_UserFin; }
+    public Integer getId_UserFin() { return id_UserFin; }
+    public void setId_UserFin(Integer id_UserFin) { this.id_UserFin = id_UserFin; }
 
     public int getId_UserRH() { return id_UserRH; }
     public void setId_UserRH(int id_UserRH) { this.id_UserRH = id_UserRH; }
