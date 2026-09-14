@@ -5,6 +5,7 @@ import Clientes from "./pages/Clientes";
 import Faturamento from "./pages/Faturamento";
 import FolhaDePagamento from "./pages/FolhaDePagamento";
 import Despesas from "./pages/Despesas";
+import Relatorios from "./pages/Relatorios";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -48,6 +49,14 @@ function App() {
                 element={
                     <ProtectedRoute>
                         <Despesas />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/relatorios"
+                element={
+                    <ProtectedRoute>
+                        <Relatorios />
                     </ProtectedRoute>
                 }
             />
