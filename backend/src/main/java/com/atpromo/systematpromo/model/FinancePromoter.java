@@ -32,6 +32,9 @@ public class FinancePromoter {
     @Column(name = "description")
     private String description;
 
+    @Column(name = "source_request_id")
+    private Integer sourceRequestId;
+
     public FinancePromoter() {
     }
 
@@ -64,4 +67,7 @@ public class FinancePromoter {
 
     public String getType() { return type; }
     public void setType(String type) { this.type = type; }
+
+    public Integer getSourceRequestId() { return sourceRequestId; }
+    public void setSourceRequestId(Integer sourceRequestId) { this.sourceRequestId = sourceRequestId; }
 }

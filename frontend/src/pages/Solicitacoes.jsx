@@ -759,8 +759,8 @@ export default function Solicitacoes() {
 
                         <div className="mb-4 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-orange-800">
                             Isso vai voltar a solicitação de <strong>{cancelTarget.promoterName}</strong> (
-                            {formatMoney(cancelTarget.amount)}) para pendente e remover o lançamento financeiro que
-                            foi gerado automaticamente na aprovação. Use só se aprovou por engano.
+                            {formatMoney(cancelTarget.amount)}) para pendente e remover o lançamento que apareceu nos
+                            Relatórios quando ela foi aprovada. Use só se aprovou por engano.
                         </div>
 
                         <form onSubmit={confirmCancelApproval} className="space-y-4">

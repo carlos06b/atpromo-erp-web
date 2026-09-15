@@ -74,7 +74,7 @@ public class ReportController {
         BigDecimal totalExpenses = promoterExpenses.add(fixedExpenses).add(variableExpenses);
 
         BigDecimal realResult = receivedIncome.subtract(totalExpenses);
-        BigDecimal expectedResult = expectedIncome.subtract(totalExpenses);
+        BigDecimal expectedResult = realResult.add(openIncome);
 
         return new GeneralReport(expectedIncome, issuedIncome, receivedIncome, openIncome, canceledIncome,
                 promoterExpenses, fixedExpenses, variableExpenses, totalExpenses, discounts, realResult, expectedResult);

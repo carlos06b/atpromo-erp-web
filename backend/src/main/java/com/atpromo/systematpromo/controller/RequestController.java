@@ -195,6 +195,7 @@ public class RequestController {
         finance.setDate(LocalDate.now());
         finance.setStatus("PAGO");
         finance.setDescription(approvalDescription(request));
+        finance.setSourceRequestId(request.getId());
         financePromoterRepository.save(finance);
 
         return ResponseEntity.ok(mapOne(request));
@@ -218,13 +219,14 @@ public class RequestController {
         }
 
         String expectedDescription = approvalDescription(request);
-        FinancePromoter linkedLaunch = financePromoterRepository.findAll().stream()
+        List<FinancePromoter> linkedLaunches = financePromoterRepository.findAll().stream()
                 .filter(f -> f.getIdPromoter() == request.getId_Promoter())
-                .filter(f -> expectedDescription.equals(f.getDescription()))
-                .findFirst()
-                .orElse(null);
+                .filter(f -> f.getSourceRequestId() != null
+                        ? f.getSourceRequestId().equals(request.getId())
+                        : expectedDescription.equals(f.getDescription()))
+                .toList();
 
-        if (linkedLaunch != null) {
+        for (FinancePromoter linkedLaunch : linkedLaunches) {
             financePromoterRepository.deleteById(linkedLaunch.getId());
         }
 
@@ -273,7 +275,7 @@ public class RequestController {
         }
 
         if ("APROVADO".equalsIgnoreCase(request.getStatus())) {
-            return ResponseEntity.status(409).body(Map.of("message", "Solicitações aprovadas já geraram lançamento financeiro e não podem ser reabertas."));
+            return ResponseEntity.status(409).body(Map.of("message", "Solicitações aprovadas não podem ser reabertas por aqui — use \"Cancelar aprovação\" se aprovou por engano."));
         }
 
         if (!"REJEITADO".equalsIgnoreCase(request.getStatus())) {
@@ -393,6 +395,6 @@ public class RequestController {
     }
 
     private String approvalDescription(Request request) {
-        return "Aprovado via solicitação #" + request.getId() + " (" + TYPE_LABELS.getOrDefault(request.getType(), request.getType()) + ")";
+        return "Pagamento via Pix aprovado – " + TYPE_LABELS.getOrDefault(request.getType(), request.getType());
     }
 }
