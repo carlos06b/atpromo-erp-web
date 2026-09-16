@@ -12,7 +12,10 @@ import com.atpromo.systematpromo.repository.FixedExpenseHistoryRepository;
 import com.atpromo.systematpromo.repository.InvoiceRepository;
 import com.atpromo.systematpromo.repository.PromoterRepository;
 import com.atpromo.systematpromo.repository.VariableExpenseRepository;
+import com.atpromo.systematpromo.security.AccessControl;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -33,25 +36,33 @@ public class ReportController {
     private final VariableExpenseRepository variableExpenseRepository;
     private final ClientRepository clientRepository;
     private final PromoterRepository promoterRepository;
+    private final AccessControl accessControl;
 
     public ReportController(InvoiceRepository invoiceRepository,
                             FinancePromoterRepository financePromoterRepository,
                             FixedExpenseHistoryRepository fixedExpenseHistoryRepository,
                             VariableExpenseRepository variableExpenseRepository,
                             ClientRepository clientRepository,
-                            PromoterRepository promoterRepository) {
+                            PromoterRepository promoterRepository,
+                            AccessControl accessControl) {
         this.invoiceRepository = invoiceRepository;
         this.financePromoterRepository = financePromoterRepository;
         this.fixedExpenseHistoryRepository = fixedExpenseHistoryRepository;
         this.variableExpenseRepository = variableExpenseRepository;
         this.clientRepository = clientRepository;
         this.promoterRepository = promoterRepository;
+        this.accessControl = accessControl;
     }
 
     @GetMapping("/general")
-    public GeneralReport getGeneralReport(
+    public ResponseEntity<?> getGeneralReport(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
+            Authentication authentication) {
+
+        if (accessControl.isRh(authentication)) {
+            return forbidden();
+        }
 
         validatePeriod(start, end);
 
@@ -76,14 +87,19 @@ public class ReportController {
         BigDecimal realResult = receivedIncome.subtract(totalExpenses);
         BigDecimal expectedResult = realResult.add(openIncome);
 
-        return new GeneralReport(expectedIncome, issuedIncome, receivedIncome, openIncome, canceledIncome,
-                promoterExpenses, fixedExpenses, variableExpenses, totalExpenses, discounts, realResult, expectedResult);
+        return ResponseEntity.ok(new GeneralReport(expectedIncome, issuedIncome, receivedIncome, openIncome, canceledIncome,
+                promoterExpenses, fixedExpenses, variableExpenses, totalExpenses, discounts, realResult, expectedResult));
     }
 
     @GetMapping("/income")
-    public IncomeReport getIncomeReport(
+    public ResponseEntity<?> getIncomeReport(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
+            Authentication authentication) {
+
+        if (accessControl.isRh(authentication)) {
+            return forbidden();
+        }
 
         validatePeriod(start, end);
 
@@ -111,13 +127,18 @@ public class ReportController {
         BigDecimal receivedIncome = totalPaidByPaymentDate(invoices, start, end);
         BigDecimal openIncome = totalOpenByDueDate(invoices, start, end);
 
-        return new IncomeReport(expectedIncome, issuedIncome, receivedIncome, openIncome, invoicesByDueDate, receivedInvoices);
+        return ResponseEntity.ok(new IncomeReport(expectedIncome, issuedIncome, receivedIncome, openIncome, invoicesByDueDate, receivedInvoices));
     }
 
     @GetMapping("/expenses")
-    public ExpenseReport getExpenseReport(
+    public ResponseEntity<?> getExpenseReport(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
+            Authentication authentication) {
+
+        if (accessControl.isRh(authentication)) {
+            return forbidden();
+        }
 
         validatePeriod(start, end);
 
@@ -156,14 +177,19 @@ public class ReportController {
         BigDecimal discounts = promoterTotals.getOrDefault("DESCONTO", BigDecimal.ZERO);
         BigDecimal totalExpenses = promoterExpenses.add(fixedTotal).add(variableTotal);
 
-        return new ExpenseReport(promoterExpenses, fixedTotal, variableTotal, totalExpenses, discounts,
-                promoterPayments, discountEntries, fixedExpenseHistory, variableExpenseList);
+        return ResponseEntity.ok(new ExpenseReport(promoterExpenses, fixedTotal, variableTotal, totalExpenses, discounts,
+                promoterPayments, discountEntries, fixedExpenseHistory, variableExpenseList));
     }
 
     @GetMapping("/by-type")
-    public TypeReport getTypeReport(
+    public ResponseEntity<?> getTypeReport(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
+            Authentication authentication) {
+
+        if (accessControl.isRh(authentication)) {
+            return forbidden();
+        }
 
         validatePeriod(start, end);
 
@@ -179,8 +205,8 @@ public class ReportController {
         Map<String, BigDecimal> promoterTotals = totalByTypeAndPeriod(finances, start, end);
         Map<String, BigDecimal> companyTotals = totalByCompanyAndDueDate(invoices, start, end);
 
-        return new TypeReport(expectedIncome, issuedIncome, receivedIncome, openIncome, canceledIncome,
-                companyTotals, promoterTotals, calculateFixedExpenses(start, end), calculateVariableExpenses(start, end));
+        return ResponseEntity.ok(new TypeReport(expectedIncome, issuedIncome, receivedIncome, openIncome, canceledIncome,
+                companyTotals, promoterTotals, calculateFixedExpenses(start, end), calculateVariableExpenses(start, end)));
     }
 
     private BigDecimal totalExpectedByDueDate(List<Invoice> invoices, LocalDate start, LocalDate end) {
@@ -339,6 +365,10 @@ public class ReportController {
 
     private BigDecimal add(BigDecimal a, BigDecimal b) {
         return a.add(nullToZero(b));
+    }
+
+    private ResponseEntity<?> forbidden() {
+        return ResponseEntity.status(403).body(Map.of("message", "Você não tem permissão para acessar relatórios."));
     }
 
     public record GeneralReport(

@@ -1,14 +1,15 @@
 import { NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { canAccess } from "../access";
 
 const navItems = [
-    { to: "/promotores", label: "Promotores" },
-    { to: "/clientes", label: "Clientes" },
-    { to: "/faturamento", label: "Faturamento" },
-    { to: "/folha-pagamento", label: "Folha de pagamento" },
-    { to: "/despesas", label: "Despesas" },
-    { to: "/relatorios", label: "Relatórios" },
-    { to: "/solicitacoes", label: "Solicitações" },
+    { to: "/promotores", page: "promotores", label: "Promotores" },
+    { to: "/clientes", page: "clientes", label: "Clientes" },
+    { to: "/faturamento", page: "faturamento", label: "Faturamento" },
+    { to: "/folha-pagamento", page: "folha-pagamento", label: "Folha de pagamento" },
+    { to: "/despesas", page: "despesas", label: "Despesas" },
+    { to: "/relatorios", page: "relatorios", label: "Relatórios" },
+    { to: "/solicitacoes", page: "solicitacoes", label: "Solicitações" },
 ];
 
 function getInitials(name) {
@@ -20,6 +21,7 @@ function getInitials(name) {
 
 export default function Layout({ title, children }) {
     const { logout, userName, jobTittle } = useAuth();
+    const visibleNavItems = navItems.filter((item) => canAccess(jobTittle, item.page));
 
     return (
         <div className="flex h-screen w-screen bg-neutral-100 text-neutral-800">
@@ -32,7 +34,7 @@ export default function Layout({ title, children }) {
                 </div>
 
                 <nav className="flex-1 px-3 py-4 space-y-1">
-                    {navItems.map((item) => (
+                    {visibleNavItems.map((item) => (
                         <NavLink
                             key={item.to}
                             to={item.to}

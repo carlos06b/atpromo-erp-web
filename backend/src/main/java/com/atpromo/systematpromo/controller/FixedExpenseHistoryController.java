@@ -2,40 +2,56 @@ package com.atpromo.systematpromo.controller;
 
 import com.atpromo.systematpromo.model.FixedExpenseHistory;
 import com.atpromo.systematpromo.repository.FixedExpenseHistoryRepository;
+import com.atpromo.systematpromo.security.AccessControl;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/fixed-expense-history")
 public class FixedExpenseHistoryController {
 
     private final FixedExpenseHistoryRepository fixedExpenseHistoryRepository;
+    private final AccessControl accessControl;
 
-    public FixedExpenseHistoryController(FixedExpenseHistoryRepository fixedExpenseHistoryRepository) {
+    public FixedExpenseHistoryController(FixedExpenseHistoryRepository fixedExpenseHistoryRepository, AccessControl accessControl) {
         this.fixedExpenseHistoryRepository = fixedExpenseHistoryRepository;
+        this.accessControl = accessControl;
     }
 
     @GetMapping
-    public List<FixedExpenseHistory> listAll() {
-        return fixedExpenseHistoryRepository.findAll();
+    public ResponseEntity<?> listAll(Authentication authentication) {
+        if (accessControl.isRh(authentication)) {
+            return forbidden();
+        }
+        return ResponseEntity.ok(fixedExpenseHistoryRepository.findAll());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<FixedExpenseHistory> getById(@PathVariable int id) {
+    public ResponseEntity<?> getById(@PathVariable int id, Authentication authentication) {
+        if (accessControl.isRh(authentication)) {
+            return forbidden();
+        }
         return fixedExpenseHistoryRepository.findById(id)
-                .map(ResponseEntity::ok)
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public FixedExpenseHistory create(@RequestBody FixedExpenseHistory fixedExpenseHistory) {
-        return fixedExpenseHistoryRepository.save(fixedExpenseHistory);
+    public ResponseEntity<?> create(@RequestBody FixedExpenseHistory fixedExpenseHistory, Authentication authentication) {
+        if (accessControl.isRh(authentication)) {
+            return forbidden();
+        }
+        return ResponseEntity.ok(fixedExpenseHistoryRepository.save(fixedExpenseHistory));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<FixedExpenseHistory> update(@PathVariable int id, @RequestBody FixedExpenseHistory fixedExpenseHistory) {
+    public ResponseEntity<?> update(@PathVariable int id, @RequestBody FixedExpenseHistory fixedExpenseHistory, Authentication authentication) {
+        if (accessControl.isRh(authentication)) {
+            return forbidden();
+        }
         if (!fixedExpenseHistoryRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
@@ -44,11 +60,18 @@ public class FixedExpenseHistoryController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable int id) {
+    public ResponseEntity<?> delete(@PathVariable int id, Authentication authentication) {
+        if (accessControl.isRh(authentication)) {
+            return forbidden();
+        }
         if (!fixedExpenseHistoryRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
         fixedExpenseHistoryRepository.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    private ResponseEntity<?> forbidden() {
+        return ResponseEntity.status(403).body(Map.of("message", "Você não tem permissão para acessar despesas."));
     }
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { apiFetch } from "../api";
+import { apiFetch, API_BASE_URL } from "../api";
 import { useAuth } from "../context/AuthContext";
 import Layout from "../components/Layout";
 import PromoterAutocomplete from "../components/PromoterAutocomplete";
@@ -103,6 +103,7 @@ export default function Solicitacoes() {
     const [pixResults, setPixResults] = useState(null);
     const [pixLoading, setPixLoading] = useState(false);
     const [pixError, setPixError] = useState("");
+    const [pixDownloading, setPixDownloading] = useState(false);
 
     const [cancelTarget, setCancelTarget] = useState(null);
     const [cancelPassword, setCancelPassword] = useState("");
@@ -333,6 +334,46 @@ export default function Solicitacoes() {
             setPixError(err.message || "Não foi possível gerar o lote de Pix.");
         } finally {
             setPixLoading(false);
+        }
+    }
+
+    async function downloadPixBatch() {
+        setPixError("");
+
+        if (!pixDate) {
+            setPixError("Selecione a data de pagamento.");
+            return;
+        }
+
+        setPixDownloading(true);
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/requests/pix-batch/export?paymentDate=${pixDate}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            if (!response.ok) {
+                let message = `Erro ${response.status}`;
+                try {
+                    const data = await response.json();
+                    message = data.message || message;
+                } catch (e) {}
+                throw new Error(message);
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `pix_lote_${pixDate}.xlsx`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            setPixError(err.message || "Não foi possível baixar a planilha.");
+        } finally {
+            setPixDownloading(false);
         }
     }
 
@@ -846,36 +887,54 @@ export default function Solicitacoes() {
                         )}
 
                         {pixResults !== null && (
-                            <div className="overflow-x-auto rounded-xl border border-neutral-200">
-                                <table className="w-full text-left text-sm">
-                                    <thead className="border-b border-neutral-200 bg-neutral-50 text-neutral-500">
-                                        <tr>
-                                            <th className="px-4 py-3 font-medium">Promotor</th>
-                                            <th className="px-4 py-3 font-medium">Tipo Pix</th>
-                                            <th className="px-4 py-3 font-medium">Chave Pix</th>
-                                            <th className="px-4 py-3 font-medium">Valor</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-neutral-100">
-                                        {pixResults.length === 0 ? (
+                            <>
+                                <div className="mb-3 flex items-center justify-between">
+                                    <span className="text-sm text-neutral-500">
+                                        {pixResults.length} {pixResults.length === 1 ? "pagamento encontrado" : "pagamentos encontrados"}
+                                    </span>
+                                    {pixResults.length > 0 && (
+                                        <button
+                                            onClick={downloadPixBatch}
+                                            disabled={pixDownloading}
+                                            type="button"
+                                            className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700 disabled:opacity-60"
+                                        >
+                                            {pixDownloading ? "Baixando..." : "Baixar planilha (.xlsx)"}
+                                        </button>
+                                    )}
+                                </div>
+
+                                <div className="overflow-x-auto rounded-xl border border-neutral-200">
+                                    <table className="w-full text-left text-sm">
+                                        <thead className="border-b border-neutral-200 bg-neutral-50 text-neutral-500">
                                             <tr>
-                                                <td colSpan={4} className="px-4 py-6 text-center text-neutral-400">
-                                                    Nenhuma solicitação pendente com chave Pix cadastrada.
-                                                </td>
+                                                <th className="px-4 py-3 font-medium">Promotor</th>
+                                                <th className="px-4 py-3 font-medium">Tipo Pix</th>
+                                                <th className="px-4 py-3 font-medium">Chave Pix</th>
+                                                <th className="px-4 py-3 font-medium">Valor</th>
                                             </tr>
-                                        ) : (
-                                            pixResults.map((payment, index) => (
-                                                <tr key={index}>
-                                                    <td className="px-4 py-3 font-medium text-black">{payment.name}</td>
-                                                    <td className="px-4 py-3 text-neutral-600">{payment.pixType || "-"}</td>
-                                                    <td className="px-4 py-3 text-neutral-600">{payment.pix || "-"}</td>
-                                                    <td className="px-4 py-3 text-neutral-600">{formatMoney(payment.amount)}</td>
+                                        </thead>
+                                        <tbody className="divide-y divide-neutral-100">
+                                            {pixResults.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={4} className="px-4 py-6 text-center text-neutral-400">
+                                                        Nenhuma solicitação pendente com chave Pix cadastrada.
+                                                    </td>
                                                 </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
+                                            ) : (
+                                                pixResults.map((payment, index) => (
+                                                    <tr key={index}>
+                                                        <td className="px-4 py-3 font-medium text-black">{payment.name}</td>
+                                                        <td className="px-4 py-3 text-neutral-600">{payment.pixType || "-"}</td>
+                                                        <td className="px-4 py-3 text-neutral-600">{payment.pix || "-"}</td>
+                                                        <td className="px-4 py-3 text-neutral-600">{formatMoney(payment.amount)}</td>
+                                                    </tr>
+                                                ))
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </>
                         )}
                     </div>
                 </div>

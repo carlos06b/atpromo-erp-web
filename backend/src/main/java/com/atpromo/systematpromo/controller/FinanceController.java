@@ -19,7 +19,9 @@ public class FinanceController {
 
     @GetMapping
     public List<FinancePromoter> listAll() {
-        return financePromoterRepository.findAll();
+        return financePromoterRepository.findAll().stream()
+                .filter(f -> f.getSourceRequestId() == null)
+                .toList();
     }
 
     @GetMapping("/{id}")

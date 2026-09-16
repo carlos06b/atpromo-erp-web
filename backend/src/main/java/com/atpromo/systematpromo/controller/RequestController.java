@@ -9,7 +9,10 @@ import com.atpromo.systematpromo.repository.FinancePromoterRepository;
 import com.atpromo.systematpromo.repository.PromoterRepository;
 import com.atpromo.systematpromo.repository.RequestRepository;
 import com.atpromo.systematpromo.repository.UserRepository;
+import com.atpromo.systematpromo.util.PixBatchExcelGenerator;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -298,6 +301,29 @@ public class RequestController {
             return ResponseEntity.status(403).body(Map.of("message", "Apenas usuários do Financeiro podem exportar o lote de Pix."));
         }
 
+        return ResponseEntity.ok(buildPendingPayments(paymentDate));
+    }
+
+    @GetMapping("/pix-batch/export")
+    public ResponseEntity<?> exportPixBatch(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate paymentDate,
+            Authentication authentication) {
+
+        User currentUser = currentUser(authentication);
+        if (currentUser == null || !isFinance(currentUser)) {
+            return ResponseEntity.status(403).body(Map.of("message", "Apenas usuários do Financeiro podem exportar o lote de Pix."));
+        }
+
+        List<PromoterPaymentData> payments = buildPendingPayments(paymentDate);
+        byte[] file = PixBatchExcelGenerator.generate(payments);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=pix_lote_solicitacoes.xlsx")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(file);
+    }
+
+    private List<PromoterPaymentData> buildPendingPayments(LocalDate paymentDate) {
         List<Request> pending = requestRepository.findByStatusIgnoreCase("PENDENTE");
         List<PromoterPaymentData> payments = new ArrayList<>();
 
@@ -320,7 +346,7 @@ public class RequestController {
 
         payments.sort(Comparator.comparing(PromoterPaymentData::getName, Comparator.nullsLast(String.CASE_INSENSITIVE_ORDER)));
 
-        return ResponseEntity.ok(payments);
+        return payments;
     }
 
     private List<RequestResponse> mapAll(List<Request> list) {

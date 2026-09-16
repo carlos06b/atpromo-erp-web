@@ -16,7 +16,7 @@ function App() {
             <Route
                 path="/promotores"
                 element={
-                    <ProtectedRoute>
+                    <ProtectedRoute page="promotores">
                         <Promotores />
                     </ProtectedRoute>
                 }
@@ -24,7 +24,7 @@ function App() {
             <Route
                 path="/clientes"
                 element={
-                    <ProtectedRoute>
+                    <ProtectedRoute page="clientes">
                         <Clientes />
                     </ProtectedRoute>
                 }
@@ -32,7 +32,7 @@ function App() {
             <Route
                 path="/faturamento"
                 element={
-                    <ProtectedRoute>
+                    <ProtectedRoute page="faturamento">
                         <Faturamento />
                     </ProtectedRoute>
                 }
@@ -40,7 +40,7 @@ function App() {
             <Route
                 path="/folha-pagamento"
                 element={
-                    <ProtectedRoute>
+                    <ProtectedRoute page="folha-pagamento">
                         <FolhaDePagamento />
                     </ProtectedRoute>
                 }
@@ -48,7 +48,7 @@ function App() {
             <Route
                 path="/despesas"
                 element={
-                    <ProtectedRoute>
+                    <ProtectedRoute page="despesas">
                         <Despesas />
                     </ProtectedRoute>
                 }
@@ -56,7 +56,7 @@ function App() {
             <Route
                 path="/relatorios"
                 element={
-                    <ProtectedRoute>
+                    <ProtectedRoute page="relatorios">
                         <Relatorios />
                     </ProtectedRoute>
                 }
@@ -64,7 +64,7 @@ function App() {
             <Route
                 path="/solicitacoes"
                 element={
-                    <ProtectedRoute>
+                    <ProtectedRoute page="solicitacoes">
                         <Solicitacoes />
                     </ProtectedRoute>
                 }

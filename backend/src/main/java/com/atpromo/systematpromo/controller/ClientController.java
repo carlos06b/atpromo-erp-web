@@ -2,40 +2,56 @@ package com.atpromo.systematpromo.controller;
 
 import com.atpromo.systematpromo.model.Client;
 import com.atpromo.systematpromo.repository.ClientRepository;
+import com.atpromo.systematpromo.security.AccessControl;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/clients")
 public class ClientController {
 
     private final ClientRepository clientRepository;
+    private final AccessControl accessControl;
 
-    public ClientController(ClientRepository clientRepository) {
+    public ClientController(ClientRepository clientRepository, AccessControl accessControl) {
         this.clientRepository = clientRepository;
+        this.accessControl = accessControl;
     }
 
     @GetMapping
-    public List<Client> listAll() {
-        return clientRepository.findAll();
+    public ResponseEntity<?> listAll(Authentication authentication) {
+        if (accessControl.isRh(authentication)) {
+            return forbidden();
+        }
+        return ResponseEntity.ok(clientRepository.findAll());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Client> getById(@PathVariable int id) {
+    public ResponseEntity<?> getById(@PathVariable int id, Authentication authentication) {
+        if (accessControl.isRh(authentication)) {
+            return forbidden();
+        }
         return clientRepository.findById(id)
-                .map(ResponseEntity::ok)
+                .<ResponseEntity<?>>map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public Client create(@RequestBody Client client) {
-        return clientRepository.save(client);
+    public ResponseEntity<?> create(@RequestBody Client client, Authentication authentication) {
+        if (accessControl.isRh(authentication)) {
+            return forbidden();
+        }
+        return ResponseEntity.ok(clientRepository.save(client));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Client> update(@PathVariable int id, @RequestBody Client client) {
+    public ResponseEntity<?> update(@PathVariable int id, @RequestBody Client client, Authentication authentication) {
+        if (accessControl.isRh(authentication)) {
+            return forbidden();
+        }
         if (!clientRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
@@ -44,11 +60,18 @@ public class ClientController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable int id) {
+    public ResponseEntity<?> delete(@PathVariable int id, Authentication authentication) {
+        if (accessControl.isRh(authentication)) {
+            return forbidden();
+        }
         if (!clientRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
         }
         clientRepository.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    private ResponseEntity<?> forbidden() {
+        return ResponseEntity.status(403).body(Map.of("message", "Você não tem permissão para acessar clientes."));
     }
 }
