@@ -1,10 +1,3 @@
--- Schema do banco systematpromo, traduzido de MySQL para PostgreSQL.
--- Gerado a partir do dump enviado pelo Carlos em 18/09/2026.
--- Rodar isso inteiro UMA VEZ no banco Postgres novo (vazio) do Render,
--- antes do backend subir pela primeira vez (o app usa
--- spring.jpa.hibernate.ddl-auto=validate, ou seja, ele espera que as
--- tabelas já existam -- ele não cria nada sozinho).
-
 BEGIN;
 
 -- =========================================================
