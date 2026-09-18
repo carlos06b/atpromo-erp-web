@@ -10,6 +10,8 @@ import IndicadoresRH from "./pages/IndicadoresRH";
 import Uniformes from "./pages/Uniformes";
 import Estoque from "./pages/Estoque";
 import Solicitacoes from "./pages/Solicitacoes";
+import RedefinicoesSenha from "./pages/RedefinicoesSenha";
+import Usuarios from "./pages/Usuarios";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
@@ -93,6 +95,22 @@ function App() {
                 element={
                     <ProtectedRoute page="solicitacoes">
                         <Solicitacoes />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/redefinicoes-senha"
+                element={
+                    <ProtectedRoute page="redefinicoes-senha">
+                        <RedefinicoesSenha />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/usuarios"
+                element={
+                    <ProtectedRoute page="usuarios">
+                        <Usuarios />
                     </ProtectedRoute>
                 }
             />

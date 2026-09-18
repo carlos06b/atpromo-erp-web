@@ -23,6 +23,8 @@ export const PAGE_ORDER = [
     "uniformes",
     "estoque",
     "solicitacoes",
+    "redefinicoes-senha",
+    "usuarios",
 ];
 
 export const PAGE_ACCESS = {
@@ -36,6 +38,8 @@ export const PAGE_ACCESS = {
     uniformes: ["RH", "ADMIN"],
     estoque: ["RH", "ADMIN"],
     solicitacoes: ["RH", "FINANCEIRO", "ADMIN"],
+    "redefinicoes-senha": ["ADMIN"],
+    usuarios: ["ADMIN"],
 };
 
 export function canAccess(jobTittle, page) {

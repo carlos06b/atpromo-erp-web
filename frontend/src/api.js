@@ -1,4 +1,7 @@
-export const API_BASE_URL = "http://localhost:8080/api";
+// Em dev local, usa localhost. No Railway (ou qualquer deploy), defina a
+// variável de ambiente VITE_API_BASE_URL apontando pro backend publicado
+// (ex: https://seu-backend.up.railway.app/api) antes de gerar o build do frontend.
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
 
 export async function apiFetch(path, { method = "GET", body, token } = {}) {
     const headers = { "Content-Type": "application/json" };

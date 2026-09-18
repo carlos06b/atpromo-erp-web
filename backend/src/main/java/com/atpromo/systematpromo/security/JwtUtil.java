@@ -12,6 +12,9 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
+    // Duração do token quando o usuário marca "lembrar de mim" no login.
+    public static final long REMEMBER_ME_EXPIRATION_MS = 30L * 24 * 60 * 60 * 1000; // 30 dias
+
     @Value("${jwt.secret}")
     private String secret;
 
@@ -23,8 +26,12 @@ public class JwtUtil {
     }
 
     public String generateToken(String email) {
+        return generateToken(email, expirationMs);
+    }
+
+    public String generateToken(String email, long customExpirationMs) {
         Date now = new Date();
-        Date expiry = new Date(now.getTime() + expirationMs);
+        Date expiry = new Date(now.getTime() + customExpirationMs);
 
         return Jwts.builder()
                 .subject(email)
