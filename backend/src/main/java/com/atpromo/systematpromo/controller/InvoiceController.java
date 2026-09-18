@@ -44,6 +44,7 @@ public class InvoiceController {
         if (accessControl.isRh(authentication)) {
             return forbidden();
         }
+        invoice.setId(null);
         return ResponseEntity.ok(invoiceRepository.save(invoice));
     }
 

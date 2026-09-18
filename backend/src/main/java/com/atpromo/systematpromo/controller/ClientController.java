@@ -44,6 +44,7 @@ public class ClientController {
         if (accessControl.isRh(authentication)) {
             return forbidden();
         }
+        client.setId(null);
         return ResponseEntity.ok(clientRepository.save(client));
     }
 

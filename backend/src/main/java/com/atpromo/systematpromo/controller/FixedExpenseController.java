@@ -49,6 +49,7 @@ public class FixedExpenseController {
         if (accessControl.isRh(authentication)) {
             return forbidden();
         }
+        fixedExpense.setId(null);
         return ResponseEntity.ok(fixedExpenseRepository.save(fixedExpense));
     }
 

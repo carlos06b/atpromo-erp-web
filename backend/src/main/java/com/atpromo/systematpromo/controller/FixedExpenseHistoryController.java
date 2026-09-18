@@ -44,6 +44,7 @@ public class FixedExpenseHistoryController {
         if (accessControl.isRh(authentication)) {
             return forbidden();
         }
+        fixedExpenseHistory.setId(null);
         return ResponseEntity.ok(fixedExpenseHistoryRepository.save(fixedExpenseHistory));
     }
 

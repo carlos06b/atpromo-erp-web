@@ -6,6 +6,9 @@ import Faturamento from "./pages/Faturamento";
 import FolhaDePagamento from "./pages/FolhaDePagamento";
 import Despesas from "./pages/Despesas";
 import Relatorios from "./pages/Relatorios";
+import IndicadoresRH from "./pages/IndicadoresRH";
+import Uniformes from "./pages/Uniformes";
+import Estoque from "./pages/Estoque";
 import Solicitacoes from "./pages/Solicitacoes";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -58,6 +61,30 @@ function App() {
                 element={
                     <ProtectedRoute page="relatorios">
                         <Relatorios />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/indicadores-rh"
+                element={
+                    <ProtectedRoute page="indicadores-rh">
+                        <IndicadoresRH />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/uniformes"
+                element={
+                    <ProtectedRoute page="uniformes">
+                        <Uniformes />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/estoque"
+                element={
+                    <ProtectedRoute page="estoque">
+                        <Estoque />
                     </ProtectedRoute>
                 }
             />

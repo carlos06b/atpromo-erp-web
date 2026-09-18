@@ -55,6 +55,9 @@ const EMPTY_FORM = {
   pix: "",
   pixType: "",
   companyLink: "",
+  store: "",
+  admissionDate: "",
+  terminationDate: "",
 };
 
 export default function Promotores() {
@@ -90,6 +93,14 @@ export default function Promotores() {
   useEffect(() => {
     loadPromoters();
   }, []);
+
+  const storeSuggestions = Array.from(
+    new Set(
+      promoters
+        .map((promoter) => (promoter.store || "").trim())
+        .filter((store) => store !== "")
+    )
+  ).sort((a, b) => a.localeCompare(b, "pt-BR"));
 
   const filteredPromoters = promoters.filter((promoter) => {
     const term = search.trim().toLowerCase();
@@ -130,6 +141,9 @@ export default function Promotores() {
       pix: promoter.pix || "",
       pixType: promoter.pixType || "",
       companyLink: promoter.companyLink || "",
+      store: promoter.store || "",
+      admissionDate: promoter.admissionDate || "",
+      terminationDate: promoter.terminationDate || "",
     });
     setIsFormOpen(true);
   }
@@ -146,8 +160,11 @@ export default function Promotores() {
 
     const payload = {
       ...form,
+      store: form.store.trim().replace(/\s+/g, " "),
       salary: form.salary === "" ? null : Number(form.salary),
       dateBirth: form.dateBirth === "" ? null : form.dateBirth,
+      admissionDate: form.admissionDate === "" ? null : form.admissionDate,
+      terminationDate: form.terminationDate === "" ? null : form.terminationDate,
     };
 
     try {
@@ -262,6 +279,7 @@ export default function Promotores() {
               <th className="px-4 py-3 font-medium">CPF</th>
               <th className="px-4 py-3 font-medium">Tipo</th>
               <th className="px-4 py-3 font-medium">Vínculo</th>
+              <th className="px-4 py-3 font-medium">Loja</th>
               <th className="px-4 py-3 font-medium">Salário/Base</th>
               <th className="px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3 font-medium text-right">Ações</th>
@@ -271,19 +289,19 @@ export default function Promotores() {
           <tbody className="divide-y divide-neutral-100">
             {loading ? (
               <tr>
-                <td colSpan="7" className="px-4 py-8 text-center text-neutral-400">
+                <td colSpan="8" className="px-4 py-8 text-center text-neutral-400">
                   Carregando...
                 </td>
               </tr>
             ) : promoters.length === 0 ? (
               <tr>
-                <td colSpan="7" className="px-4 py-8 text-center text-neutral-400">
+                <td colSpan="8" className="px-4 py-8 text-center text-neutral-400">
                   Nenhum promotor cadastrado ainda.
                 </td>
               </tr>
             ) : filteredPromoters.length === 0 ? (
               <tr>
-                <td colSpan="7" className="px-4 py-8 text-center text-neutral-400">
+                <td colSpan="8" className="px-4 py-8 text-center text-neutral-400">
                   Nenhum promotor encontrado com esse filtro.
                 </td>
               </tr>
@@ -294,6 +312,7 @@ export default function Promotores() {
                   <td className="px-4 py-3 text-neutral-600">{promoter.cpf || "-"}</td>
                   <td className="px-4 py-3 text-neutral-600">{promoter.type || "-"}</td>
                   <td className="px-4 py-3 text-neutral-600">{promoter.companyLink || "-"}</td>
+                  <td className="px-4 py-3 text-neutral-600">{promoter.store || "-"}</td>
                   <td className="px-4 py-3 text-neutral-600">
                     {promoter.salary != null
                       ? Number(promoter.salary).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
@@ -484,6 +503,43 @@ export default function Promotores() {
                   </select>
                 </div>
 
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-neutral-700">Loja</label>
+                  <input
+                    value={form.store}
+                    onChange={(e) => handleChange("store", e.target.value)}
+                    list="store-suggestions"
+                    autoComplete="off"
+                    placeholder="Digite ou selecione uma loja existente"
+                    className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                  />
+                  <datalist id="store-suggestions">
+                    {storeSuggestions.map((store) => (
+                      <option key={store} value={store} />
+                    ))}
+                  </datalist>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-neutral-700">Data de admissão</label>
+                  <input
+                    type="date"
+                    value={form.admissionDate}
+                    onChange={(e) => handleChange("admissionDate", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-neutral-700">Data de desligamento</label>
+                  <input
+                    type="date"
+                    value={form.terminationDate}
+                    onChange={(e) => handleChange("terminationDate", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                  />
+                </div>
+
                 <div className="flex items-center gap-2 pt-6">
                   <input
                     type="checkbox"
@@ -586,6 +642,18 @@ export default function Promotores() {
                 <div>
                   <p className="text-neutral-500">Vínculo (empresa)</p>
                   <p className="font-medium text-black">{detailsPromoter.companyLink || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-neutral-500">Loja</p>
+                  <p className="font-medium text-black">{detailsPromoter.store || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-neutral-500">Data de admissão</p>
+                  <p className="font-medium text-black">{formatDate(detailsPromoter.admissionDate)}</p>
+                </div>
+                <div>
+                  <p className="text-neutral-500">Data de desligamento</p>
+                  <p className="font-medium text-black">{formatDate(detailsPromoter.terminationDate)}</p>
                 </div>
                 <div>
                   <p className="text-neutral-500">Status</p>

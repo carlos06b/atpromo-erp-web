@@ -9,6 +9,9 @@ const navItems = [
     { to: "/folha-pagamento", page: "folha-pagamento", label: "Folha de pagamento" },
     { to: "/despesas", page: "despesas", label: "Despesas" },
     { to: "/relatorios", page: "relatorios", label: "Relatórios" },
+    { to: "/indicadores-rh", page: "indicadores-rh", label: "Indicadores RH" },
+    { to: "/uniformes", page: "uniformes", label: "Uniformes e materiais" },
+    { to: "/estoque", page: "estoque", label: "Estoque" },
     { to: "/solicitacoes", page: "solicitacoes", label: "Solicitações" },
 ];
 

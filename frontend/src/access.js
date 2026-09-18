@@ -19,6 +19,9 @@ export const PAGE_ORDER = [
     "folha-pagamento",
     "despesas",
     "relatorios",
+    "indicadores-rh",
+    "uniformes",
+    "estoque",
     "solicitacoes",
 ];
 
@@ -29,6 +32,9 @@ export const PAGE_ACCESS = {
     "folha-pagamento": ["RH", "FINANCEIRO", "ADMIN"],
     despesas: ["FINANCEIRO", "ADMIN"],
     relatorios: ["FINANCEIRO", "ADMIN"],
+    "indicadores-rh": ["RH", "ADMIN"],
+    uniformes: ["RH", "ADMIN"],
+    estoque: ["RH", "ADMIN"],
     solicitacoes: ["RH", "FINANCEIRO", "ADMIN"],
 };
 

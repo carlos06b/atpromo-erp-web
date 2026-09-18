@@ -20,6 +20,17 @@ const EMPTY_FIXED_FORM = {
   active: true,
 };
 
+const EMPTY_HISTORY_FORM = {
+  id: null,
+  fixedExpenseId: null,
+  name: "",
+  amount: "",
+  dueDate: "",
+  status: false,
+  paymentDate: "",
+  description: "",
+};
+
 const EMPTY_VARIABLE_FORM = {
   id: null,
   name: "",
@@ -103,6 +114,10 @@ export default function Despesas() {
   const [fixedForm, setFixedForm] = useState(EMPTY_FIXED_FORM);
   const [isFixedFormOpen, setIsFixedFormOpen] = useState(false);
   const [savingFixed, setSavingFixed] = useState(false);
+
+  const [historyForm, setHistoryForm] = useState(EMPTY_HISTORY_FORM);
+  const [isHistoryFormOpen, setIsHistoryFormOpen] = useState(false);
+  const [savingHistory, setSavingHistory] = useState(false);
 
   const [variableForm, setVariableForm] = useState(EMPTY_VARIABLE_FORM);
   const [isVariableFormOpen, setIsVariableFormOpen] = useState(false);
@@ -271,6 +286,55 @@ export default function Despesas() {
       setError("Não foi possível gerar o próximo mês dessa despesa.");
     } finally {
       setGeneratingId(null);
+    }
+  }
+
+  function handleHistoryChange(field, value) {
+    setHistoryForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function openEditHistory(entry) {
+    setHistoryForm({
+      id: entry.id,
+      fixedExpenseId: entry.fixedExpenseId,
+      name: entry.name || "",
+      amount: entry.amount ?? "",
+      dueDate: entry.dueDate || "",
+      status: entry.status === "PAGO",
+      paymentDate: entry.paymentDate || "",
+      description: entry.description || "",
+    });
+    setIsHistoryFormOpen(true);
+  }
+
+  function closeHistoryForm() {
+    setIsHistoryFormOpen(false);
+    setHistoryForm(EMPTY_HISTORY_FORM);
+  }
+
+  async function handleHistorySubmit(event) {
+    event.preventDefault();
+    setSavingHistory(true);
+    setError("");
+
+    const payload = {
+      fixedExpenseId: historyForm.fixedExpenseId,
+      name: historyForm.name,
+      amount: historyForm.amount === "" ? null : Number(historyForm.amount),
+      dueDate: historyForm.dueDate === "" ? null : historyForm.dueDate,
+      status: historyForm.status ? "PAGO" : "PENDENTE",
+      paymentDate: historyForm.paymentDate === "" ? null : historyForm.paymentDate,
+      description: historyForm.description === "" ? null : historyForm.description,
+    };
+
+    try {
+      await apiFetch(`/fixed-expense-history/${historyForm.id}`, { method: "PUT", body: payload, token });
+      closeHistoryForm();
+      await loadData();
+    } catch (err) {
+      setError("Não foi possível salvar o histórico dessa despesa.");
+    } finally {
+      setSavingHistory(false);
     }
   }
 
@@ -597,8 +661,13 @@ export default function Despesas() {
                         {expense.active && (
                           <button
                             onClick={() => generateNextMonth(expense)}
-                            disabled={generatingId === expense.id}
-                            className="mr-3 text-sm font-medium text-neutral-600 hover:text-orange-600 disabled:opacity-50"
+                            disabled={generatingId === expense.id || !expense.status}
+                            title={
+                              !expense.status
+                                ? "Marque essa despesa como paga antes de gerar o próximo mês."
+                                : undefined
+                            }
+                            className="mr-3 text-sm font-medium text-neutral-600 hover:text-orange-600 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-neutral-600"
                           >
                             {generatingId === expense.id ? "Gerando..." : "Gerar próximo mês"}
                           </button>
@@ -668,6 +737,12 @@ export default function Despesas() {
                           </td>
                           <td className="px-4 py-3 text-neutral-600">{entry.description || "-"}</td>
                           <td className="px-4 py-3 text-right">
+                            <button
+                              onClick={() => openEditHistory(entry)}
+                              className="mr-3 text-sm font-medium text-neutral-600 hover:text-orange-600"
+                            >
+                              Editar
+                            </button>
                             <button
                               onClick={() => requestDelete("history", entry.id)}
                               className="text-sm font-medium text-neutral-600 hover:text-red-600"
@@ -904,6 +979,98 @@ export default function Despesas() {
                   className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-orange-600 disabled:opacity-60"
                 >
                   {savingFixed ? "Salvando..." : fixedForm.id ? "Salvar alterações" : "Cadastrar"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isHistoryFormOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-auto rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-black">Editar mês do histórico</h2>
+              <button onClick={closeHistoryForm} className="text-neutral-400 hover:text-black" type="button">✕</button>
+            </div>
+
+            <form onSubmit={handleHistorySubmit} className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-neutral-700">Nome</label>
+                <input
+                  value={historyForm.name}
+                  onChange={(e) => handleHistoryChange("name", e.target.value)}
+                  required
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-neutral-700">Valor</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={historyForm.amount}
+                    onChange={(e) => handleHistoryChange("amount", e.target.value)}
+                    required
+                    className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-neutral-700">Vencimento</label>
+                  <input
+                    type="date"
+                    value={historyForm.dueDate}
+                    onChange={(e) => handleHistoryChange("dueDate", e.target.value)}
+                    required
+                    className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-neutral-700">Status</label>
+                  <select
+                    value={historyForm.status ? "true" : "false"}
+                    onChange={(e) => handleHistoryChange("status", e.target.value === "true")}
+                    className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                  >
+                    <option value="false">Pendente</option>
+                    <option value="true">Pago</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-neutral-700">Data de pagamento</label>
+                  <input
+                    type="date"
+                    value={historyForm.paymentDate}
+                    onChange={(e) => handleHistoryChange("paymentDate", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-sm font-medium text-neutral-700">Descrição</label>
+                  <input
+                    value={historyForm.description}
+                    onChange={(e) => handleHistoryChange("description", e.target.value)}
+                    className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 border-t border-neutral-100 pt-4">
+                <button type="button" onClick={closeHistoryForm} className="rounded-lg px-4 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-100">
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingHistory}
+                  className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-orange-600 disabled:opacity-60"
+                >
+                  {savingHistory ? "Salvando..." : "Salvar alterações"}
                 </button>
               </div>
             </form>

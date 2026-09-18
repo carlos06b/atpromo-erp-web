@@ -33,6 +33,7 @@ public class FinanceController {
 
     @PostMapping
     public FinancePromoter create(@RequestBody FinancePromoter financePromoter) {
+        financePromoter.setId(null);
         return financePromoterRepository.save(financePromoter);
     }
 

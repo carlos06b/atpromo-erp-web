@@ -50,6 +50,15 @@ public class Promoter {
     @Column(name = "company_link")
     private String companyLink;
 
+    @Column(name = "store")
+    private String store;
+
+    @Column(name = "admission_date")
+    private LocalDate admissionDate;
+
+    @Column(name = "termination_date")
+    private LocalDate terminationDate;
+
     public Promoter() {
     }
 
@@ -108,4 +117,13 @@ public class Promoter {
 
     public String getCompanyLink() { return companyLink; }
     public void setCompanyLink(String companyLink) { this.companyLink = companyLink; }
+
+    public String getStore() { return store; }
+    public void setStore(String store) { this.store = store; }
+
+    public LocalDate getAdmissionDate() { return admissionDate; }
+    public void setAdmissionDate(LocalDate admissionDate) { this.admissionDate = admissionDate; }
+
+    public LocalDate getTerminationDate() { return terminationDate; }
+    public void setTerminationDate(LocalDate terminationDate) { this.terminationDate = terminationDate; }
 }

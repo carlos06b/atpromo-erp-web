@@ -39,6 +39,7 @@ public class PromoterController {
         if (accessControl.isFinance(authentication)) {
             return forbidden();
         }
+        promoter.setId(null);
         return ResponseEntity.ok(promoterRepository.save(promoter));
     }
 

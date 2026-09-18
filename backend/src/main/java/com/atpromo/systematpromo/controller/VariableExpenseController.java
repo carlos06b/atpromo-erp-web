@@ -44,6 +44,7 @@ public class VariableExpenseController {
         if (accessControl.isRh(authentication)) {
             return forbidden();
         }
+        variableExpense.setId(null);
         return ResponseEntity.ok(variableExpenseRepository.save(variableExpense));
     }
 

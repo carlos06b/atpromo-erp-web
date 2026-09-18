@@ -6,6 +6,12 @@ import ConfirmDeleteDialog from "../components/ConfirmDeleteDialog";
 
 const COMPANY_LINK_OPTIONS = ["AT", "TEJO"];
 
+function companyLinkBadgeClasses(value) {
+  if (value === "AT") return "bg-green-100 text-green-700";
+  if (value === "TEJO") return "bg-blue-100 text-blue-700";
+  return "bg-neutral-100 text-neutral-500";
+}
+
 const EMPTY_FORM = {
   id: null,
   name: "",
@@ -219,7 +225,19 @@ export default function Clientes() {
                   <td className="px-4 py-3 font-medium text-neutral-800">{client.name}</td>
                   <td className="px-4 py-3 text-neutral-600">{client.corporateName || "-"}</td>
                   <td className="px-4 py-3 text-neutral-600">{client.cnpj || "-"}</td>
-                  <td className="px-4 py-3 text-neutral-600">{client.companyLink || "-"}</td>
+                  <td className="px-4 py-3">
+                    {client.companyLink ? (
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${companyLinkBadgeClasses(
+                          client.companyLink
+                        )}`}
+                      >
+                        {client.companyLink}
+                      </span>
+                    ) : (
+                      <span className="text-neutral-600">-</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">
                     <span
                       className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
@@ -408,7 +426,17 @@ export default function Clientes() {
                 </div>
                 <div>
                   <p className="text-neutral-500">Vínculo (empresa)</p>
-                  <p className="font-medium text-black">{detailsClient.companyLink || "-"}</p>
+                  {detailsClient.companyLink ? (
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${companyLinkBadgeClasses(
+                        detailsClient.companyLink
+                      )}`}
+                    >
+                      {detailsClient.companyLink}
+                    </span>
+                  ) : (
+                    <p className="font-medium text-black">-</p>
+                  )}
                 </div>
                 <div>
                   <p className="text-neutral-500">Status</p>
