@@ -14,12 +14,16 @@ import {
     IconClipboardList,
     IconLock,
     IconKey,
+    IconStore,
+    IconFileSpreadsheet,
     IconLogOut,
 } from "./icons";
 
 const navItems = [
     { to: "/promotores", page: "promotores", label: "Promotores", icon: IconUsers },
+    { to: "/lojas", page: "lojas", label: "Lojas", icon: IconStore },
     { to: "/clientes", page: "clientes", label: "Clientes", icon: IconBriefcase },
+    { to: "/descritivos", page: "descritivos", label: "Descritivos", icon: IconFileSpreadsheet },
     { to: "/faturamento", page: "faturamento", label: "Faturamento", icon: IconWallet },
     { to: "/folha-pagamento", page: "folha-pagamento", label: "Folha de pagamento", icon: IconCreditCard },
     { to: "/despesas", page: "despesas", label: "Despesas", icon: IconReceipt },

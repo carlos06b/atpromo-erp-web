@@ -1,7 +1,9 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import Promotores from "./pages/Promotores";
+import Lojas from "./pages/Lojas";
 import Clientes from "./pages/Clientes";
+import Descritivos from "./pages/Descritivos";
 import Faturamento from "./pages/Faturamento";
 import FolhaDePagamento from "./pages/FolhaDePagamento";
 import Despesas from "./pages/Despesas";
@@ -27,10 +29,26 @@ function App() {
                 }
             />
             <Route
+                path="/lojas"
+                element={
+                    <ProtectedRoute page="lojas">
+                        <Lojas />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
                 path="/clientes"
                 element={
                     <ProtectedRoute page="clientes">
                         <Clientes />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/descritivos"
+                element={
+                    <ProtectedRoute page="descritivos">
+                        <Descritivos />
                     </ProtectedRoute>
                 }
             />

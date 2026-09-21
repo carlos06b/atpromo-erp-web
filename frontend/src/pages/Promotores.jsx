@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../api";
 import { useAuth } from "../context/AuthContext";
+import { isSupervisor } from "../access";
 import Layout from "../components/Layout";
 import ConfirmDeleteDialog from "../components/ConfirmDeleteDialog";
 
@@ -55,14 +56,16 @@ const EMPTY_FORM = {
   pix: "",
   pixType: "",
   companyLink: "",
-  store: "",
+  lojaId: "",
   admissionDate: "",
   terminationDate: "",
 };
 
 export default function Promotores() {
-  const { token } = useAuth();
+  const { token, jobTittle } = useAuth();
+  const readOnly = isSupervisor(jobTittle);
   const [promoters, setPromoters] = useState([]);
+  const [lojas, setLojas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [form, setForm] = useState(EMPTY_FORM);
@@ -90,17 +93,22 @@ export default function Promotores() {
     }
   }
 
+  async function loadLojas() {
+    try {
+      const data = await apiFetch("/lojas", { token });
+      setLojas(data || []);
+    } catch (err) {
+      // silencioso: se não carregar, o select de loja só fica vazio
+    }
+  }
+
   useEffect(() => {
     loadPromoters();
+    loadLojas();
   }, []);
 
-  const storeSuggestions = Array.from(
-    new Set(
-      promoters
-        .map((promoter) => (promoter.store || "").trim())
-        .filter((store) => store !== "")
-    )
-  ).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const lojaNomeById = Object.fromEntries(lojas.map((loja) => [loja.id, loja.nome]));
+  const lojasOrdenadas = [...lojas].sort((a, b) => (a.nome || "").localeCompare(b.nome || "", "pt-BR"));
 
   const filteredPromoters = promoters.filter((promoter) => {
     const term = search.trim().toLowerCase();
@@ -141,7 +149,7 @@ export default function Promotores() {
       pix: promoter.pix || "",
       pixType: promoter.pixType || "",
       companyLink: promoter.companyLink || "",
-      store: promoter.store || "",
+      lojaId: promoter.lojaId ?? "",
       admissionDate: promoter.admissionDate || "",
       terminationDate: promoter.terminationDate || "",
     });
@@ -160,7 +168,7 @@ export default function Promotores() {
 
     const payload = {
       ...form,
-      store: form.store.trim().replace(/\s+/g, " "),
+      lojaId: form.lojaId === "" ? null : Number(form.lojaId),
       salary: form.salary === "" ? null : Number(form.salary),
       dateBirth: form.dateBirth === "" ? null : form.dateBirth,
       admissionDate: form.admissionDate === "" ? null : form.admissionDate,
@@ -213,12 +221,14 @@ export default function Promotores() {
           {filteredPromoters.length} de {promoters.length} promotor{promoters.length !== 1 ? "es" : ""}
         </p>
 
-        <button
-          onClick={openNew}
-          className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-orange-600"
-        >
-          + Novo promotor
-        </button>
+        {!readOnly && (
+          <button
+            onClick={openNew}
+            className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-orange-600"
+          >
+            + Novo promotor
+          </button>
+        )}
       </div>
 
       <div className="mb-4 flex flex-wrap gap-3 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
@@ -280,7 +290,7 @@ export default function Promotores() {
               <th className="px-4 py-3 font-medium">Tipo</th>
               <th className="px-4 py-3 font-medium">Vínculo</th>
               <th className="px-4 py-3 font-medium">Loja</th>
-              <th className="px-4 py-3 font-medium">Salário/Base</th>
+              {!readOnly && <th className="px-4 py-3 font-medium">Salário/Base</th>}
               <th className="px-4 py-3 font-medium">Status</th>
               <th className="px-4 py-3 font-medium text-right">Ações</th>
             </tr>
@@ -289,19 +299,19 @@ export default function Promotores() {
           <tbody className="divide-y divide-neutral-100">
             {loading ? (
               <tr>
-                <td colSpan="8" className="px-4 py-8 text-center text-neutral-400">
+                <td colSpan={readOnly ? 7 : 8} className="px-4 py-8 text-center text-neutral-400">
                   Carregando...
                 </td>
               </tr>
             ) : promoters.length === 0 ? (
               <tr>
-                <td colSpan="8" className="px-4 py-8 text-center text-neutral-400">
+                <td colSpan={readOnly ? 7 : 8} className="px-4 py-8 text-center text-neutral-400">
                   Nenhum promotor cadastrado ainda.
                 </td>
               </tr>
             ) : filteredPromoters.length === 0 ? (
               <tr>
-                <td colSpan="8" className="px-4 py-8 text-center text-neutral-400">
+                <td colSpan={readOnly ? 7 : 8} className="px-4 py-8 text-center text-neutral-400">
                   Nenhum promotor encontrado com esse filtro.
                 </td>
               </tr>
@@ -312,12 +322,14 @@ export default function Promotores() {
                   <td className="px-4 py-3 text-neutral-600">{promoter.cpf || "-"}</td>
                   <td className="px-4 py-3 text-neutral-600">{promoter.type || "-"}</td>
                   <td className="px-4 py-3 text-neutral-600">{promoter.companyLink || "-"}</td>
-                  <td className="px-4 py-3 text-neutral-600">{promoter.store || "-"}</td>
-                  <td className="px-4 py-3 text-neutral-600">
-                    {promoter.salary != null
-                      ? Number(promoter.salary).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
-                      : "-"}
-                  </td>
+                  <td className="px-4 py-3 text-neutral-600">{lojaNomeById[promoter.lojaId] || "-"}</td>
+                  {!readOnly && (
+                    <td className="px-4 py-3 text-neutral-600">
+                      {promoter.salary != null
+                        ? Number(promoter.salary).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+                        : "-"}
+                    </td>
+                  )}
                   <td className="px-4 py-3">
                     <span
                       className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
@@ -332,22 +344,26 @@ export default function Promotores() {
                   <td className="px-4 py-3 text-right">
                     <button
                       onClick={() => setDetailsPromoter(promoter)}
-                      className="mr-3 text-sm font-medium text-neutral-500 hover:text-orange-600"
+                      className={`text-sm font-medium text-neutral-500 hover:text-orange-600 ${!readOnly ? "mr-3" : ""}`}
                     >
                       Detalhes
                     </button>
-                    <button
-                      onClick={() => openEdit(promoter)}
-                      className="mr-3 text-sm font-medium text-neutral-600 hover:text-orange-600"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      onClick={() => requestDelete(promoter.id)}
-                      className="text-sm font-medium text-neutral-600 hover:text-red-600"
-                    >
-                      Excluir
-                    </button>
+                    {!readOnly && (
+                      <>
+                        <button
+                          onClick={() => openEdit(promoter)}
+                          className="mr-3 text-sm font-medium text-neutral-600 hover:text-orange-600"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => requestDelete(promoter.id)}
+                          className="text-sm font-medium text-neutral-600 hover:text-red-600"
+                        >
+                          Excluir
+                        </button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))
@@ -505,19 +521,18 @@ export default function Promotores() {
 
                 <div>
                   <label className="mb-1 block text-sm font-medium text-neutral-700">Loja</label>
-                  <input
-                    value={form.store}
-                    onChange={(e) => handleChange("store", e.target.value)}
-                    list="store-suggestions"
-                    autoComplete="off"
-                    placeholder="Digite ou selecione uma loja existente"
+                  <select
+                    value={form.lojaId}
+                    onChange={(e) => handleChange("lojaId", e.target.value)}
                     className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
-                  />
-                  <datalist id="store-suggestions">
-                    {storeSuggestions.map((store) => (
-                      <option key={store} value={store} />
+                  >
+                    <option value="">Selecione...</option>
+                    {lojasOrdenadas.map((loja) => (
+                      <option key={loja.id} value={loja.id}>
+                        {loja.nome}
+                      </option>
                     ))}
-                  </datalist>
+                  </select>
                 </div>
 
                 <div>
@@ -619,14 +634,16 @@ export default function Promotores() {
                   <p className="text-neutral-500">Tipo</p>
                   <p className="font-medium text-black">{detailsPromoter.type || "-"}</p>
                 </div>
-                <div>
-                  <p className="text-neutral-500">Salário/Base</p>
-                  <p className="font-medium text-black">
-                    {detailsPromoter.salary != null
-                      ? Number(detailsPromoter.salary).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
-                      : "-"}
-                  </p>
-                </div>
+                {!readOnly && (
+                  <div>
+                    <p className="text-neutral-500">Salário/Base</p>
+                    <p className="font-medium text-black">
+                      {detailsPromoter.salary != null
+                        ? Number(detailsPromoter.salary).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+                        : "-"}
+                    </p>
+                  </div>
+                )}
                 <div>
                   <p className="text-neutral-500">Chave Pix</p>
                   <p className="font-medium text-black">{detailsPromoter.pix || "-"}</p>
@@ -645,7 +662,7 @@ export default function Promotores() {
                 </div>
                 <div>
                   <p className="text-neutral-500">Loja</p>
-                  <p className="font-medium text-black">{detailsPromoter.store || "-"}</p>
+                  <p className="font-medium text-black">{lojaNomeById[detailsPromoter.lojaId] || "-"}</p>
                 </div>
                 <div>
                   <p className="text-neutral-500">Data de admissão</p>
@@ -678,17 +695,19 @@ export default function Promotores() {
               >
                 Fechar
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const promoter = detailsPromoter;
-                  setDetailsPromoter(null);
-                  openEdit(promoter);
-                }}
-                className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-orange-600"
-              >
-                Editar
-              </button>
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const promoter = detailsPromoter;
+                    setDetailsPromoter(null);
+                    openEdit(promoter);
+                  }}
+                  className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-orange-600"
+                >
+                  Editar
+                </button>
+              )}
             </div>
           </div>
         </div>

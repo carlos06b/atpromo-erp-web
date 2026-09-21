@@ -151,6 +151,27 @@ export function IconBox({ className }) {
     );
 }
 
+export function IconStore({ className }) {
+    return (
+        <svg {...base} className={className}>
+            <path d="M3.5 9.5 4.5 4.5h15l1 5" />
+            <path d="M3.5 9.5a2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 2-2.5" opacity=".7" />
+            <path d="M5 9.8V19.5h14V9.8" />
+            <path d="M9.5 19.5v-5.5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v5.5" />
+        </svg>
+    );
+}
+
+export function IconFileSpreadsheet({ className }) {
+    return (
+        <svg {...base} className={className}>
+            <path d="M6 3h9l4 4v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" />
+            <path d="M14.5 3.2V8h4.8" opacity=".6" />
+            <path d="M8 12.5h8M8 16h8M8 12.5v6.5M12 12.5v6.5M16 12.5v6.5" opacity=".7" />
+        </svg>
+    );
+}
+
 export function IconKey({ className }) {
     return (
         <svg {...base} className={className}>

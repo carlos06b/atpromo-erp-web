@@ -1,6 +1,8 @@
 package com.atpromo.systematpromo.controller;
 
+import com.atpromo.systematpromo.model.Loja;
 import com.atpromo.systematpromo.model.Promoter;
+import com.atpromo.systematpromo.repository.LojaRepository;
 import com.atpromo.systematpromo.repository.PromoterRepository;
 import com.atpromo.systematpromo.security.AccessControl;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -16,16 +18,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/hr-indicators")
 public class HrIndicatorsController {
 
     private final PromoterRepository promoterRepository;
+    private final LojaRepository lojaRepository;
     private final AccessControl accessControl;
 
-    public HrIndicatorsController(PromoterRepository promoterRepository, AccessControl accessControl) {
+    public HrIndicatorsController(PromoterRepository promoterRepository, LojaRepository lojaRepository, AccessControl accessControl) {
         this.promoterRepository = promoterRepository;
+        this.lojaRepository = lojaRepository;
         this.accessControl = accessControl;
     }
 
@@ -50,6 +55,8 @@ public class HrIndicatorsController {
         }
 
         List<Promoter> promoters = promoterRepository.findAll();
+        Map<Integer, String> lojaNomeById = lojaRepository.findAll().stream()
+                .collect(Collectors.toMap(Loja::getId, Loja::getNome));
 
         long totalActive = promoters.stream().filter(Promoter::isActive).count();
 
@@ -72,14 +79,14 @@ public class HrIndicatorsController {
                 : null;
 
         Map<String, Long> byType = groupActiveBy(promoters, p -> labelOrDefault(p.getType(), "Sem tipo"));
-        Map<String, Long> byStore = groupActiveBy(promoters, p -> labelOrDefault(normalizeSpacing(p.getStore()), "Sem loja"));
+        Map<String, Long> byStore = groupActiveBy(promoters, p -> labelOrDefault(lojaNomeById.get(p.getLojaId()), "Sem loja"));
         Map<String, Long> byCompanyLink = groupActiveBy(promoters, p -> labelOrDefault(p.getCompanyLink(), "Sem vínculo"));
 
         List<BirthdayEntry> birthdays = promoters.stream()
                 .filter(Promoter::isActive)
                 .filter(p -> p.getDateBirth() != null && p.getDateBirth().getMonthValue() == month)
                 .sorted(Comparator.comparing(p -> p.getDateBirth().getDayOfMonth()))
-                .map(p -> new BirthdayEntry(p.getId(), p.getName(), p.getDateBirth(), p.getStore(), p.getType()))
+                .map(p -> new BirthdayEntry(p.getId(), p.getName(), p.getDateBirth(), lojaNomeById.get(p.getLojaId()), p.getType()))
                 .toList();
 
         return ResponseEntity.ok(new HrIndicatorsResponse(
@@ -107,10 +114,6 @@ public class HrIndicatorsController {
 
     private String labelOrDefault(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value;
-    }
-
-    private String normalizeSpacing(String value) {
-        return value == null ? null : value.trim().replaceAll("\\s+", " ");
     }
 
     private ResponseEntity<?> badRequest(String message) {

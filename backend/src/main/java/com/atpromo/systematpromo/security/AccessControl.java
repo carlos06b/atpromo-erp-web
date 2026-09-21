@@ -31,8 +31,13 @@ public class AccessControl {
         return user != null && user.getJobTittle() != null && user.getJobTittle().trim().equalsIgnoreCase("FINANCEIRO");
     }
 
+    public boolean isSupervisor(Authentication authentication) {
+        User user = currentUser(authentication);
+        return user != null && user.getJobTittle() != null && user.getJobTittle().trim().equalsIgnoreCase("SUPERVISOR");
+    }
+
     public boolean isAdmin(Authentication authentication) {
         User user = currentUser(authentication);
-        return user != null && !isRh(authentication) && !isFinance(authentication);
+        return user != null && !isRh(authentication) && !isFinance(authentication) && !isSupervisor(authentication);
     }
 }

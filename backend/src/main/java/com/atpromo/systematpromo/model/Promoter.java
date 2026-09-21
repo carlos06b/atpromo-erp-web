@@ -50,8 +50,8 @@ public class Promoter {
     @Column(name = "company_link")
     private String companyLink;
 
-    @Column(name = "store")
-    private String store;
+    @Column(name = "loja_id")
+    private Integer lojaId;
 
     @Column(name = "admission_date")
     private LocalDate admissionDate;
@@ -118,8 +118,8 @@ public class Promoter {
     public String getCompanyLink() { return companyLink; }
     public void setCompanyLink(String companyLink) { this.companyLink = companyLink; }
 
-    public String getStore() { return store; }
-    public void setStore(String store) { this.store = store; }
+    public Integer getLojaId() { return lojaId; }
+    public void setLojaId(Integer lojaId) { this.lojaId = lojaId; }
 
     public LocalDate getAdmissionDate() { return admissionDate; }
     public void setAdmissionDate(LocalDate admissionDate) { this.admissionDate = admissionDate; }

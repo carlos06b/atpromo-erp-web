@@ -6,15 +6,22 @@ export function isFinance(jobTittle) {
     return (jobTittle || "").trim().toUpperCase() === "FINANCEIRO";
 }
 
+export function isSupervisor(jobTittle) {
+    return (jobTittle || "").trim().toUpperCase() === "SUPERVISOR";
+}
+
 export function getRole(jobTittle) {
     if (isRh(jobTittle)) return "RH";
     if (isFinance(jobTittle)) return "FINANCEIRO";
+    if (isSupervisor(jobTittle)) return "SUPERVISOR";
     return "ADMIN";
 }
 
 export const PAGE_ORDER = [
     "promotores",
+    "lojas",
     "clientes",
+    "descritivos",
     "faturamento",
     "folha-pagamento",
     "despesas",
@@ -28,8 +35,10 @@ export const PAGE_ORDER = [
 ];
 
 export const PAGE_ACCESS = {
-    promotores: ["RH", "ADMIN"],
+    promotores: ["RH", "SUPERVISOR", "ADMIN"],
+    lojas: ["RH", "FINANCEIRO", "SUPERVISOR", "ADMIN"],
     clientes: ["FINANCEIRO", "ADMIN"],
+    descritivos: ["FINANCEIRO", "SUPERVISOR", "ADMIN"],
     faturamento: ["FINANCEIRO", "ADMIN"],
     "folha-pagamento": ["RH", "FINANCEIRO", "ADMIN"],
     despesas: ["FINANCEIRO", "ADMIN"],

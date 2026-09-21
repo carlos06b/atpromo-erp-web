@@ -17,7 +17,7 @@ import java.util.regex.Pattern;
 @RequestMapping("/api/users")
 public class UserController {
 
-    private static final List<String> ALLOWED_ROLES = List.of("RH", "FINANCEIRO", "ADMIN");
+    private static final List<String> ALLOWED_ROLES = List.of("RH", "FINANCEIRO", "SUPERVISOR", "ADMIN");
     private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
 
     private final UserRepository userRepository;
@@ -107,8 +107,6 @@ public class UserController {
         user.setEmail(normalizedEmail);
         user.setJobTittle(request.jobTittle().trim().toUpperCase());
 
-        // Só troca a senha se uma nova senha foi realmente enviada -
-        // evita apagar a senha de alguém sem querer numa edição de nome/cargo.
         if (changingPassword) {
             user.setPassword(passwordEncoder.encode(request.password()));
         }
@@ -143,7 +141,7 @@ public class UserController {
             return "Informe um email válido.";
         }
         if (request.jobTittle() == null || !ALLOWED_ROLES.contains(request.jobTittle().trim().toUpperCase())) {
-            return "Selecione um perfil válido (RH, FINANCEIRO ou ADMIN).";
+            return "Selecione um perfil válido (RH, FINANCEIRO, SUPERVISOR ou ADMIN).";
         }
         if (requirePassword && (request.password() == null || request.password().length() < 8)) {
             return "A senha deve ter pelo menos 8 caracteres.";
@@ -156,7 +154,7 @@ public class UserController {
     }
 
     private boolean isAdmin(Authentication authentication) {
-        return !accessControl.isRh(authentication) && !accessControl.isFinance(authentication);
+        return accessControl.isAdmin(authentication);
     }
 
     private ResponseEntity<?> badRequest(String message) {

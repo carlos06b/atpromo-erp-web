@@ -8,6 +8,7 @@ import { IconLock, IconUsers } from "../components/icons";
 const ROLE_OPTIONS = [
     { value: "RH", label: "RH" },
     { value: "FINANCEIRO", label: "Financeiro" },
+    { value: "SUPERVISOR", label: "Supervisor" },
     { value: "ADMIN", label: "Admin" },
 ];
 
@@ -33,6 +34,8 @@ function roleBadgeClasses(role) {
             return "bg-blue-50 text-blue-700";
         case "FINANCEIRO":
             return "bg-emerald-50 text-emerald-700";
+        case "SUPERVISOR":
+            return "bg-purple-50 text-purple-700";
         default:
             return "bg-orange-50 text-orange-700";
     }

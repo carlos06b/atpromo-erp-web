@@ -45,7 +45,7 @@ public class PasswordResetRequestController {
     }
 
     private boolean isAdmin(Authentication authentication) {
-        return !accessControl.isRh(authentication) && !accessControl.isFinance(authentication);
+        return accessControl.isAdmin(authentication);
     }
 
     private ResponseEntity<?> forbidden() {
