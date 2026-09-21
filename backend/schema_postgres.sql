@@ -80,7 +80,7 @@ CREATE TABLE promoter (
     name                VARCHAR(150) NOT NULL,
     cpf                 VARCHAR(20) NOT NULL,
     phone               VARCHAR(20),
-    uf                  CHAR(2) NOT NULL,
+    uf                  VARCHAR(255) NOT NULL,
     city                VARCHAR(100) NOT NULL,
     company_link        VARCHAR(10),
     date_birth          DATE,
