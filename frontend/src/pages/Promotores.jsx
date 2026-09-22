@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { isSupervisor } from "../access";
 import Layout from "../components/Layout";
 import ConfirmDeleteDialog from "../components/ConfirmDeleteDialog";
+import CurrencyInput from "../components/CurrencyInput";
 
 const UF_OPTIONS = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
@@ -453,11 +454,9 @@ export default function Promotores() {
 
                 <div>
                   <label className="mb-1 block text-sm font-medium text-neutral-700">Salário/Base</label>
-                  <input
-                    type="number"
-                    step="0.01"
+                  <CurrencyInput
                     value={form.salary}
-                    onChange={(e) => handleChange("salary", e.target.value)}
+                    onChange={(val) => handleChange("salary", val)}
                     className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
                   />
                 </div>

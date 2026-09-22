@@ -3,6 +3,7 @@ import { apiFetch } from "../api";
 import { useAuth } from "../context/AuthContext";
 import Layout from "../components/Layout";
 import ConfirmDeleteDialog from "../components/ConfirmDeleteDialog";
+import CurrencyInput from "../components/CurrencyInput";
 
 const STATUS_STYLES = {
   true: "bg-green-100 text-green-700",
@@ -903,11 +904,9 @@ export default function Despesas() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-neutral-700">Valor</label>
-                  <input
-                    type="number"
-                    step="0.01"
+                  <CurrencyInput
                     value={fixedForm.amount}
-                    onChange={(e) => handleFixedChange("amount", e.target.value)}
+                    onChange={(val) => handleFixedChange("amount", val)}
                     required
                     className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
                   />
@@ -1008,11 +1007,9 @@ export default function Despesas() {
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-neutral-700">Valor</label>
-                  <input
-                    type="number"
-                    step="0.01"
+                  <CurrencyInput
                     value={historyForm.amount}
-                    onChange={(e) => handleHistoryChange("amount", e.target.value)}
+                    onChange={(val) => handleHistoryChange("amount", val)}
                     required
                     className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
                   />
@@ -1125,11 +1122,9 @@ export default function Despesas() {
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <label className="mb-1 block text-sm font-medium text-neutral-700">Valor total da compra</label>
-                    <input
-                      type="number"
-                      step="0.01"
+                    <CurrencyInput
                       value={variableForm.totalAmount}
-                      onChange={(e) => handleVariableChange("totalAmount", e.target.value)}
+                      onChange={(val) => handleVariableChange("totalAmount", val)}
                       required
                       className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
                     />
@@ -1162,11 +1157,9 @@ export default function Despesas() {
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <label className="mb-1 block text-sm font-medium text-neutral-700">Valor</label>
-                    <input
-                      type="number"
-                      step="0.01"
+                    <CurrencyInput
                       value={variableForm.amount}
-                      onChange={(e) => handleVariableChange("amount", e.target.value)}
+                      onChange={(val) => handleVariableChange("amount", val)}
                       required
                       className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
                     />

@@ -3,6 +3,7 @@ import { apiFetch } from "../api";
 import { useAuth } from "../context/AuthContext";
 import Layout from "../components/Layout";
 import ConfirmDeleteDialog from "../components/ConfirmDeleteDialog";
+import CurrencyInput from "../components/CurrencyInput";
 
 const MESES = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -50,6 +51,8 @@ export default function Descritivos() {
   const [clientes, setClientes] = useState([]);
   const [lojas, setLojas] = useState([]);
   const [selectedClienteId, setSelectedClienteId] = useState("");
+  const [clienteSearch, setClienteSearch] = useState("");
+  const [showClienteSuggestions, setShowClienteSuggestions] = useState(false);
 
   const [descritivos, setDescritivos] = useState([]);
   const [loadingDescritivos, setLoadingDescritivos] = useState(false);
@@ -136,6 +139,42 @@ export default function Descritivos() {
     } else {
       setDescritivos([]);
     }
+  }
+
+  function handlePickCliente(cliente) {
+    setClienteSearch(cliente.name);
+    setShowClienteSuggestions(false);
+    handleSelectCliente(String(cliente.id));
+  }
+
+  function handleClienteInputChange(value) {
+    setClienteSearch(value);
+    setShowClienteSuggestions(true);
+  }
+
+  function handleClienteInputFocus() {
+    setShowClienteSuggestions(true);
+    if (selectedClienteId) {
+      setClienteSearch("");
+    }
+  }
+
+  function handleClienteInputBlur() {
+    setTimeout(() => {
+      setShowClienteSuggestions(false);
+      if (selectedClienteId) {
+        const atual = clientes.find((c) => String(c.id) === String(selectedClienteId));
+        setClienteSearch(atual?.name || "");
+      }
+    }, 150);
+  }
+
+  function clearClienteSelection() {
+    setClienteSearch("");
+    setShowClienteSuggestions(false);
+    setSelectedClienteId("");
+    setDescritivos([]);
+    setOpenDescritivo(null);
   }
 
   function openNewModal() {
@@ -291,24 +330,60 @@ export default function Descritivos() {
   }
 
   const clienteSelecionado = clientes.find((c) => String(c.id) === String(selectedClienteId));
+  const filteredClientes = clientes.filter((c) =>
+    (c.name || "").toLowerCase().includes(clienteSearch.trim().toLowerCase())
+  );
 
   return (
     <Layout title="Descritivos">
       <div className="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
-        <div className="min-w-[260px] flex-1">
+        <div className="relative min-w-[260px] flex-1">
           <label className="mb-1 block text-sm font-medium text-neutral-700">Cliente</label>
-          <select
-            value={selectedClienteId}
-            onChange={(e) => handleSelectCliente(e.target.value)}
-            className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
-          >
-            <option value="">Selecione um cliente...</option>
-            {clientes.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <input
+              type="text"
+              value={clienteSearch}
+              onChange={(e) => handleClienteInputChange(e.target.value)}
+              onFocus={handleClienteInputFocus}
+              onBlur={handleClienteInputBlur}
+              placeholder="Buscar cliente pelo nome..."
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 pr-8 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+            />
+            {(clienteSearch || selectedClienteId) && (
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={clearClienteSelection}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {showClienteSuggestions && (
+            <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-neutral-200 bg-white shadow-lg">
+              {filteredClientes.length === 0 ? (
+                <p className="px-3 py-2 text-sm text-neutral-400">Nenhum cliente encontrado.</p>
+              ) : (
+                filteredClientes.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => handlePickCliente(c)}
+                    className={`block w-full px-3 py-2 text-left text-sm hover:bg-orange-50 ${
+                      String(c.id) === String(selectedClienteId)
+                        ? "bg-orange-50 font-medium text-orange-700"
+                        : "text-neutral-700"
+                    }`}
+                  >
+                    {c.name}
+                  </button>
+                ))
+              )}
+            </div>
+          )}
         </div>
 
         {selectedClienteId && (
@@ -607,12 +682,9 @@ export default function Descritivos() {
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium text-neutral-700">Valor da hora (R$)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
+                  <CurrencyInput
                     value={linhaForm.valorHora}
-                    onChange={(e) => setLinhaForm((prev) => ({ ...prev, valorHora: e.target.value }))}
+                    onChange={(val) => setLinhaForm((prev) => ({ ...prev, valorHora: val }))}
                     className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
                   />
                 </div>
@@ -651,12 +723,9 @@ export default function Descritivos() {
                   Definir o valor total manualmente
                 </label>
                 {linhaForm.manualEnabled && (
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
+                  <CurrencyInput
                     value={linhaForm.valorTotalManual}
-                    onChange={(e) => setLinhaForm((prev) => ({ ...prev, valorTotalManual: e.target.value }))}
+                    onChange={(val) => setLinhaForm((prev) => ({ ...prev, valorTotalManual: val }))}
                     placeholder="Valor total (R$)"
                     className="mt-3 w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
                   />

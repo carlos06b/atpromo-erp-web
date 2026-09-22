@@ -3,6 +3,7 @@ import { apiFetch, API_BASE_URL } from "../api";
 import { useAuth } from "../context/AuthContext";
 import Layout from "../components/Layout";
 import PromoterAutocomplete from "../components/PromoterAutocomplete";
+import CurrencyInput from "../components/CurrencyInput";
 
 const STATUS_STYLES = {
     PENDENTE: "bg-orange-100 text-orange-700",
@@ -658,11 +659,9 @@ export default function Solicitacoes() {
 
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-neutral-700">Valor</label>
-                                    <input
-                                        type="number"
-                                        step="0.01"
+                                    <CurrencyInput
                                         value={createForm.amount}
-                                        onChange={(e) => handleCreateChange("amount", e.target.value)}
+                                        onChange={(val) => handleCreateChange("amount", val)}
                                         className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
                                     />
                                 </div>

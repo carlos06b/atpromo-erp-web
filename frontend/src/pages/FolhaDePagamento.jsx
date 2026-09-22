@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import Layout from "../components/Layout";
 import ConfirmDeleteDialog from "../components/ConfirmDeleteDialog";
 import PromoterAutocomplete from "../components/PromoterAutocomplete";
+import CurrencyInput from "../components/CurrencyInput";
 
 const LAUNCH_TYPE_OPTIONS = [
     { value: "DESCONTO", label: "Desconto" },
@@ -65,6 +66,8 @@ export default function FolhaDePagamento() {
     const [search, setSearch] = useState("");
     const [filterType, setFilterType] = useState("");
     const [filterPromoterId, setFilterPromoterId] = useState("");
+    const [filterDateStart, setFilterDateStart] = useState("");
+    const [filterDateEnd, setFilterDateEnd] = useState("");
 
     const [rangeStart, setRangeStart] = useState("");
     const [rangeEnd, setRangeEnd] = useState("");
@@ -113,9 +116,16 @@ export default function FolhaDePagamento() {
 
         const matchesType = filterType === "" || launch.type === filterType;
         const matchesPromoter = filterPromoterId === "" || String(launch.idPromoter) === filterPromoterId;
+        const matchesDateStart = filterDateStart === "" || (launch.date || "") >= filterDateStart;
+        const matchesDateEnd = filterDateEnd === "" || (launch.date || "") <= filterDateEnd;
 
-        return matchesSearch && matchesType && matchesPromoter;
+        return matchesSearch && matchesType && matchesPromoter && matchesDateStart && matchesDateEnd;
     });
+
+    function clearDateFilter() {
+        setFilterDateStart("");
+        setFilterDateEnd("");
+    }
 
     function handleChange(field, value) {
         setForm((prev) => ({ ...prev, [field]: value }));
@@ -334,6 +344,37 @@ export default function FolhaDePagamento() {
                                 </option>
                             ))}
                         </select>
+
+                        <div className="flex items-end gap-2">
+                            <div>
+                                <label className="mb-1 block text-xs font-medium text-neutral-500">De</label>
+                                <input
+                                    type="date"
+                                    value={filterDateStart}
+                                    onChange={(e) => setFilterDateStart(e.target.value)}
+                                    className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                                />
+                            </div>
+                            <div>
+                                <label className="mb-1 block text-xs font-medium text-neutral-500">Até</label>
+                                <input
+                                    type="date"
+                                    value={filterDateEnd}
+                                    onChange={(e) => setFilterDateEnd(e.target.value)}
+                                    className="rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                                />
+                            </div>
+                            {(filterDateStart || filterDateEnd) && (
+                                <button
+                                    type="button"
+                                    onClick={clearDateFilter}
+                                    className="rounded-lg px-2 py-2 text-sm font-medium text-neutral-400 hover:text-red-600"
+                                    title="Limpar período"
+                                >
+                                    ✕
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     {promoters.length === 0 && !loading && (
@@ -658,11 +699,9 @@ export default function FolhaDePagamento() {
 
                                 <div>
                                     <label className="mb-1 block text-sm font-medium text-neutral-700">Valor</label>
-                                    <input
-                                        type="number"
-                                        step="0.01"
+                                    <CurrencyInput
                                         value={form.amount}
-                                        onChange={(e) => handleChange("amount", e.target.value)}
+                                        onChange={(val) => handleChange("amount", val)}
                                         required
                                         className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
                                     />

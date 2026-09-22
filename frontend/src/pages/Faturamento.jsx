@@ -4,6 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import Layout from "../components/Layout";
 import ConfirmDeleteDialog from "../components/ConfirmDeleteDialog";
 import FaturamentoCalendar from "../components/FaturamentoCalendar";
+import CurrencyInput from "../components/CurrencyInput";
 
 const STATUS_OPTIONS = [
   { value: "PENDENTE", label: "Pendente" },
@@ -428,11 +429,9 @@ export default function Faturamento() {
 
                 <div>
                   <label className="mb-1 block text-sm font-medium text-neutral-700">Valor</label>
-                  <input
-                    type="number"
-                    step="0.01"
+                  <CurrencyInput
                     value={form.amount}
-                    onChange={(e) => handleChange("amount", e.target.value)}
+                    onChange={(val) => handleChange("amount", val)}
                     required
                     className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
                   />
@@ -440,11 +439,9 @@ export default function Faturamento() {
 
                 <div>
                   <label className="mb-1 block text-sm font-medium text-neutral-700">Valor recebido</label>
-                  <input
-                    type="number"
-                    step="0.01"
+                  <CurrencyInput
                     value={form.receivedAmount}
-                    onChange={(e) => handleChange("receivedAmount", e.target.value)}
+                    onChange={(val) => handleChange("receivedAmount", val)}
                     className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
                   />
                 </div>
