@@ -20,6 +20,9 @@ public class Descritivo {
     @Column(name = "ano")
     private Integer ano;
 
+    @Column(name = "rotulo")
+    private String rotulo;
+
     public Descritivo() {
     }
 
@@ -34,4 +37,7 @@ public class Descritivo {
 
     public Integer getAno() { return ano; }
     public void setAno(Integer ano) { this.ano = ano; }
+
+    public String getRotulo() { return rotulo; }
+    public void setRotulo(String rotulo) { this.rotulo = rotulo; }
 }

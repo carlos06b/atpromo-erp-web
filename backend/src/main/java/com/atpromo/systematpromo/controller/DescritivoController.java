@@ -48,7 +48,7 @@ public class DescritivoController {
             BigDecimal valorTotalManual
     ) {}
 
-    public record DescritivoRequest(Integer clienteId, Integer mes, Integer ano) {}
+    public record DescritivoRequest(Integer clienteId, Integer mes, Integer ano, String rotulo) {}
 
     public record LinhaView(
             Integer id, Integer numero, Integer lojaId, String lojaNome, String lojaCnpj,
@@ -61,10 +61,13 @@ public class DescritivoController {
 
     public record DescritivoView(
             Integer id, Integer clienteId, String clienteNomeFantasia, String clienteRazaoSocial, String clienteCnpj,
-            Integer mes, Integer ano, List<LinhaView> linhas, BigDecimal valorTotalGeral
+            Integer mes, Integer ano, String rotulo, String rotuloExibicao, List<LinhaView> linhas, BigDecimal valorTotalGeral
     ) {}
 
-    public record DescritivoResumo(Integer id, Integer clienteId, String clienteNomeFantasia, Integer mes, Integer ano, BigDecimal valorTotalGeral) {}
+    public record DescritivoResumo(
+            Integer id, Integer clienteId, String clienteNomeFantasia, Integer mes, Integer ano,
+            String rotulo, String rotuloExibicao, BigDecimal valorTotalGeral
+    ) {}
 
     @GetMapping
     public ResponseEntity<?> listAll(@RequestParam(required = false) Integer clienteId, Authentication authentication) {
@@ -77,14 +80,21 @@ public class DescritivoController {
         Map<Integer, Client> clientesById = clientRepository.findAll().stream()
                 .collect(Collectors.toMap(Client::getId, c -> c));
 
+        Map<String, List<Descritivo>> grupos = descritivos.stream()
+                .collect(Collectors.groupingBy(d -> d.getClienteId() + "|" + d.getMes() + "|" + d.getAno()));
+
         List<DescritivoResumo> resumos = descritivos.stream()
-                .sorted(Comparator.comparing(Descritivo::getAno).thenComparing(Descritivo::getMes))
+                .sorted(Comparator.comparing(Descritivo::getAno).thenComparing(Descritivo::getMes).thenComparing(Descritivo::getId))
                 .map(d -> {
                     Client cliente = clientesById.get(d.getClienteId());
                     BigDecimal total = linhaRepository.findByDescritivoId(d.getId()).stream()
                             .map(DescritivoLinha::getValorTotal)
                             .reduce(BigDecimal.ZERO, BigDecimal::add);
-                    return new DescritivoResumo(d.getId(), d.getClienteId(), cliente != null ? cliente.getName() : null, d.getMes(), d.getAno(), total);
+                    List<Descritivo> irmaos = grupos.get(d.getClienteId() + "|" + d.getMes() + "|" + d.getAno());
+                    return new DescritivoResumo(
+                            d.getId(), d.getClienteId(), cliente != null ? cliente.getName() : null,
+                            d.getMes(), d.getAno(), d.getRotulo(), rotuloExibicao(d, irmaos), total
+                    );
                 })
                 .toList();
 
@@ -112,14 +122,23 @@ public class DescritivoController {
         if (request.ano() == null || request.ano() < 2000) {
             return badRequest("Ano inválido.");
         }
-        if (descritivoRepository.findByClienteIdAndMesAndAno(request.clienteId(), request.mes(), request.ano()).isPresent()) {
-            return badRequest("Já existe um descritivo desse cliente para esse mês/ano.");
+
+        String rotulo = normalizarRotulo(request.rotulo());
+
+        List<Descritivo> existentes = descritivoRepository.findByClienteIdAndMesAndAno(request.clienteId(), request.mes(), request.ano());
+        if (rotulo != null) {
+            boolean duplicado = existentes.stream()
+                    .anyMatch(d -> rotulo.equalsIgnoreCase(normalizarRotulo(d.getRotulo())));
+            if (duplicado) {
+                return badRequest("Já existe um descritivo desse cliente nesse mês com esse mesmo rótulo.");
+            }
         }
 
         Descritivo descritivo = new Descritivo();
         descritivo.setClienteId(request.clienteId());
         descritivo.setMes(request.mes());
         descritivo.setAno(request.ano());
+        descritivo.setRotulo(rotulo);
         Descritivo saved = descritivoRepository.save(descritivo);
 
         return ResponseEntity.ok(toView(saved));
@@ -210,14 +229,19 @@ public class DescritivoController {
         int proximoMes = atual.getMes() == 12 ? 1 : atual.getMes() + 1;
         int proximoAno = atual.getMes() == 12 ? atual.getAno() + 1 : atual.getAno();
 
-        if (descritivoRepository.findByClienteIdAndMesAndAno(atual.getClienteId(), proximoMes, proximoAno).isPresent()) {
-            return badRequest("Já existe um descritivo desse cliente pro próximo mês.");
+        String rotuloAtual = normalizarRotulo(atual.getRotulo());
+        List<Descritivo> existentesProximoMes = descritivoRepository.findByClienteIdAndMesAndAno(atual.getClienteId(), proximoMes, proximoAno);
+        boolean jaExiste = existentesProximoMes.stream()
+                .anyMatch(d -> Objects.equals(rotuloAtual, normalizarRotulo(d.getRotulo())));
+        if (jaExiste) {
+            return badRequest("Já existe um descritivo desse cliente pro próximo mês com esse mesmo rótulo.");
         }
 
         Descritivo novo = new Descritivo();
         novo.setClienteId(atual.getClienteId());
         novo.setMes(proximoMes);
         novo.setAno(proximoAno);
+        novo.setRotulo(atual.getRotulo());
         Descritivo novoSalvo = descritivoRepository.save(novo);
 
         LocalDate primeiroDiaMesAtual = LocalDate.of(atual.getAno(), atual.getMes(), 1);
@@ -244,6 +268,28 @@ public class DescritivoController {
         }
 
         return ResponseEntity.ok(toView(novoSalvo));
+    }
+
+    private String normalizarRotulo(String rotulo) {
+        if (rotulo == null) return null;
+        String trimmed = rotulo.trim();
+        return trimmed.isBlank() ? null : trimmed;
+    }
+
+    private String rotuloExibicao(Descritivo descritivo, List<Descritivo> irmaos) {
+        String proprio = normalizarRotulo(descritivo.getRotulo());
+        if (proprio != null) return proprio;
+        if (irmaos == null || irmaos.size() <= 1) return null;
+
+        List<Descritivo> ordenados = irmaos.stream()
+                .sorted(Comparator.comparing(Descritivo::getId))
+                .toList();
+        for (int i = 0; i < ordenados.size(); i++) {
+            if (ordenados.get(i).getId().equals(descritivo.getId())) {
+                return "(" + (i + 1) + ")";
+            }
+        }
+        return null;
     }
 
     private void applyRequest(DescritivoLinha linha, LinhaRequest request) {
@@ -368,12 +414,16 @@ public class DescritivoController {
                 .map(LinhaView::valorTotal)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
+        List<Descritivo> irmaos = descritivoRepository.findByClienteIdAndMesAndAno(
+                descritivo.getClienteId(), descritivo.getMes(), descritivo.getAno());
+
         return new DescritivoView(
                 descritivo.getId(), descritivo.getClienteId(),
                 cliente != null ? cliente.getName() : null,
                 cliente != null ? cliente.getCorporateName() : null,
                 cliente != null ? cliente.getCnpj() : null,
                 descritivo.getMes(), descritivo.getAno(),
+                descritivo.getRotulo(), rotuloExibicao(descritivo, irmaos),
                 linhaViews, totalGeral
         );
     }

@@ -63,7 +63,7 @@ export default function Descritivos() {
   const [error, setError] = useState("");
 
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
-  const [newForm, setNewForm] = useState({ mes: now.getMonth() + 1, ano: now.getFullYear() });
+  const [newForm, setNewForm] = useState({ mes: now.getMonth() + 1, ano: now.getFullYear(), rotulo: "" });
   const [newFormError, setNewFormError] = useState("");
   const [creating, setCreating] = useState(false);
 
@@ -178,7 +178,7 @@ export default function Descritivos() {
   }
 
   function openNewModal() {
-    setNewForm({ mes: now.getMonth() + 1, ano: now.getFullYear() });
+    setNewForm({ mes: now.getMonth() + 1, ano: now.getFullYear(), rotulo: "" });
     setNewFormError("");
     setIsNewModalOpen(true);
   }
@@ -190,7 +190,12 @@ export default function Descritivos() {
     try {
       const data = await apiFetch("/descritivos", {
         method: "POST",
-        body: { clienteId: Number(selectedClienteId), mes: Number(newForm.mes), ano: Number(newForm.ano) },
+        body: {
+          clienteId: Number(selectedClienteId),
+          mes: Number(newForm.mes),
+          ano: Number(newForm.ano),
+          rotulo: newForm.rotulo.trim() === "" ? null : newForm.rotulo.trim(),
+        },
         token,
       });
       setIsNewModalOpen(false);
@@ -396,10 +401,11 @@ export default function Descritivos() {
             >
               {descritivos.length === 0 && <option value="">Nenhum descritivo ainda</option>}
               {[...descritivos]
-                .sort((a, b) => b.ano - a.ano || b.mes - a.mes)
+                .sort((a, b) => b.ano - a.ano || b.mes - a.mes || a.id - b.id)
                 .map((d) => (
                   <option key={d.id} value={d.id}>
                     {MESES[d.mes - 1]}/{d.ano}
+                    {d.rotuloExibicao ? ` — ${d.rotuloExibicao}` : ""}
                   </option>
                 ))}
             </select>
@@ -449,8 +455,15 @@ export default function Descritivos() {
                 {openDescritivo.clienteRazaoSocial && <>Razão social: {openDescritivo.clienteRazaoSocial} · </>}
                 CNPJ: {openDescritivo.clienteCnpj || "-"}
               </p>
-              <p className="mt-1 text-sm font-medium text-orange-600">
-                {MESES[openDescritivo.mes - 1]}/{openDescritivo.ano}
+              <p className="mt-1 flex items-center gap-2 text-sm font-medium text-orange-600">
+                <span>
+                  {MESES[openDescritivo.mes - 1]}/{openDescritivo.ano}
+                </span>
+                {openDescritivo.rotuloExibicao && (
+                  <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700">
+                    {openDescritivo.rotuloExibicao}
+                  </span>
+                )}
               </p>
             </div>
 
@@ -583,6 +596,21 @@ export default function Descritivos() {
                     className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-neutral-700">Rótulo (opcional)</label>
+                <input
+                  type="text"
+                  value={newForm.rotulo}
+                  onChange={(e) => setNewForm((prev) => ({ ...prev, rotulo: e.target.value }))}
+                  placeholder="Ex: SP, Atacadão..."
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                />
+                <p className="mt-1 text-xs text-neutral-400">
+                  Só preenche se esse cliente tiver mais de um descritivo no mesmo mês (ex: separado por estado ou
+                  rede). Deixa em branco no caso comum.
+                </p>
               </div>
 
               {newFormError && (
