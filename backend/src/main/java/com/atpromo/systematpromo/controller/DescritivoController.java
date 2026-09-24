@@ -14,6 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.text.Normalizer;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
@@ -22,6 +23,10 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/descritivos")
 public class DescritivoController {
+
+    private static final List<String> REDE_PRIORIDADE = List.of(
+            "ASSAI", "ATACADAO", "NOVO ATACAREJO", "MIX MATEUS"
+    );
 
     private final DescritivoRepository descritivoRepository;
     private final DescritivoLinhaRepository linhaRepository;
@@ -51,7 +56,7 @@ public class DescritivoController {
     public record DescritivoRequest(Integer clienteId, Integer mes, Integer ano, String rotulo) {}
 
     public record LinhaView(
-            Integer id, Integer numero, Integer lojaId, String lojaNome, String lojaCnpj,
+            Integer id, Integer numero, Integer lojaId, String lojaNome, String lojaUf, String lojaCnpj,
             List<Integer> diasSemana, String quantidadeAtendimentoLabel,
             BigDecimal horasPorAtendimento, BigDecimal valorHora,
             LocalDate dataInicio, LocalDate dataFim,
@@ -374,6 +379,32 @@ public class DescritivoController {
         return null;
     }
 
+    private String normalizar(String texto) {
+        if (texto == null) return "";
+        String semAcento = Normalizer.normalize(texto, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "");
+        return semAcento.trim().toUpperCase();
+    }
+
+    private int prioridadeRede(String rede) {
+        String normalizado = normalizar(rede);
+        int indice = REDE_PRIORIDADE.indexOf(normalizado);
+        return indice >= 0 ? indice : REDE_PRIORIDADE.size();
+    }
+
+    private String chaveOrdenacaoLinha(DescritivoLinha linha, Map<Integer, Loja> lojasById) {
+        Loja loja = lojasById.get(linha.getLojaId());
+        String rede = loja != null ? loja.getRede() : null;
+        boolean semRede = rede == null || rede.isBlank();
+
+        int tier = semRede ? 1 : 0;
+        int prioridade = semRede ? REDE_PRIORIDADE.size() + 1 : prioridadeRede(rede);
+        String uf = normalizar(loja != null ? loja.getUf() : null);
+        String nome = normalizar(loja != null ? loja.getNome() : null);
+
+        return tier + "|" + String.format("%02d", prioridade) + "|" + normalizar(rede) + "|" + uf + "|" + nome;
+    }
+
     private DescritivoView toView(Descritivo descritivo) {
         Client cliente = clientRepository.findById(descritivo.getClienteId()).orElse(null);
         Map<Integer, Loja> lojasById = lojaRepository.findAll().stream()
@@ -383,7 +414,7 @@ public class DescritivoController {
         LocalDate fimMes = inicioMes.withDayOfMonth(inicioMes.lengthOfMonth());
 
         List<DescritivoLinha> linhas = linhaRepository.findByDescritivoId(descritivo.getId()).stream()
-                .sorted(Comparator.comparing(l -> l.getOrdem() != null ? l.getOrdem() : 0))
+                .sorted(Comparator.comparing(l -> chaveOrdenacaoLinha(l, lojasById)))
                 .toList();
 
         List<LinhaView> linhaViews = new ArrayList<>();
@@ -402,6 +433,7 @@ public class DescritivoController {
             linhaViews.add(new LinhaView(
                     linha.getId(), numero++, linha.getLojaId(),
                     loja != null ? loja.getNome() : null,
+                    loja != null ? loja.getUf() : null,
                     loja != null ? loja.getCnpj() : null,
                     dias, label, linha.getHorasPorAtendimento(), linha.getValorHora(),
                     linha.getDataInicio(), linha.getDataFim(),

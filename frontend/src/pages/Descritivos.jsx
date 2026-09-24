@@ -31,6 +31,11 @@ function formatCurrency(value) {
   return Number(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+function descritivoLabel(d) {
+  if (!d) return "";
+  return `${MESES[d.mes - 1]}/${d.ano}${d.rotuloExibicao ? ` — ${d.rotuloExibicao}` : ""}`;
+}
+
 const EMPTY_LINHA_FORM = {
   id: null,
   lojaId: "",
@@ -56,6 +61,8 @@ export default function Descritivos() {
 
   const [descritivos, setDescritivos] = useState([]);
   const [loadingDescritivos, setLoadingDescritivos] = useState(false);
+  const [mesSearch, setMesSearch] = useState("");
+  const [showMesSuggestions, setShowMesSuggestions] = useState(false);
 
   const [openDescritivo, setOpenDescritivo] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
@@ -76,6 +83,22 @@ export default function Descritivos() {
   const [deleteDescritivoTarget, setDeleteDescritivoTarget] = useState(false);
 
   const [gerandoProximoMes, setGerandoProximoMes] = useState(false);
+  const [gerarProximoMesConfirmOpen, setGerarProximoMesConfirmOpen] = useState(false);
+
+  const [selectedLinhaIds, setSelectedLinhaIds] = useState(new Set());
+  const [isBulkValueModalOpen, setIsBulkValueModalOpen] = useState(false);
+  const [bulkValueField, setBulkValueField] = useState("valorHora");
+  const [bulkValueAmount, setBulkValueAmount] = useState("");
+  const [bulkValueError, setBulkValueError] = useState("");
+  const [applyingBulkValue, setApplyingBulkValue] = useState(false);
+  const [bulkDeleteConfirmOpen, setBulkDeleteConfirmOpen] = useState(false);
+  const [deletingBulk, setDeletingBulk] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+
+  useEffect(() => {
+    setSelectedLinhaIds(new Set());
+    setSelectionMode(false);
+  }, [openDescritivo?.id]);
 
   useEffect(() => {
     async function loadBase() {
@@ -129,6 +152,39 @@ export default function Descritivos() {
     } finally {
       setLoadingDetail(false);
     }
+  }
+
+  useEffect(() => {
+    if (!showMesSuggestions) {
+      setMesSearch(openDescritivo ? descritivoLabel(openDescritivo) : "");
+    }
+  }, [openDescritivo]);
+
+  function handlePickDescritivo(d) {
+    setMesSearch(descritivoLabel(d));
+    setShowMesSuggestions(false);
+    if (String(d.id) !== String(openDescritivo?.id)) {
+      openDescritivoDetail(d.id);
+    }
+  }
+
+  function handleMesInputChange(value) {
+    setMesSearch(value);
+    setShowMesSuggestions(true);
+  }
+
+  function handleMesInputFocus() {
+    setShowMesSuggestions(true);
+    if (openDescritivo) {
+      setMesSearch("");
+    }
+  }
+
+  function handleMesInputBlur() {
+    setTimeout(() => {
+      setShowMesSuggestions(false);
+      setMesSearch(openDescritivo ? descritivoLabel(openDescritivo) : "");
+    }, 150);
   }
 
   function handleSelectCliente(id) {
@@ -233,6 +289,7 @@ export default function Descritivos() {
       setError(err.message || "Não foi possível gerar o próximo mês.");
     } finally {
       setGerandoProximoMes(false);
+      setGerarProximoMesConfirmOpen(false);
     }
   }
 
@@ -334,9 +391,123 @@ export default function Descritivos() {
     }
   }
 
+  function toggleLinhaSelecionada(id) {
+    setSelectedLinhaIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function toggleTodasLinhas() {
+    if (!openDescritivo) return;
+    setSelectedLinhaIds((prev) => {
+      if (prev.size === openDescritivo.linhas.length) {
+        return new Set();
+      }
+      return new Set(openDescritivo.linhas.map((l) => l.id));
+    });
+  }
+
+  function clearSelecaoLinhas() {
+    setSelectedLinhaIds(new Set());
+  }
+
+  function toggleSelectionMode() {
+    setSelectionMode((prev) => {
+      if (prev) {
+        setSelectedLinhaIds(new Set());
+      }
+      return !prev;
+    });
+  }
+
+  function openBulkValueModal() {
+    setBulkValueField("valorHora");
+    setBulkValueAmount("");
+    setBulkValueError("");
+    setIsBulkValueModalOpen(true);
+  }
+
+  function closeBulkValueModal() {
+    setIsBulkValueModalOpen(false);
+    setBulkValueAmount("");
+    setBulkValueError("");
+  }
+
+  async function handleApplyBulkValue(event) {
+    event.preventDefault();
+    setBulkValueError("");
+
+    if (bulkValueAmount === "") {
+      setBulkValueError("Informe o valor a aplicar.");
+      return;
+    }
+
+    setApplyingBulkValue(true);
+    try {
+      const linhasSelecionadas = openDescritivo.linhas.filter((l) => selectedLinhaIds.has(l.id));
+      for (const linha of linhasSelecionadas) {
+        const payload = {
+          lojaId: linha.lojaId,
+          diasSemana: linha.diasSemana,
+          horasPorAtendimento: Number(linha.horasPorAtendimento),
+          valorHora: bulkValueField === "valorHora" ? Number(bulkValueAmount) : Number(linha.valorHora),
+          dataInicio: linha.dataInicio,
+          dataFim: linha.dataFim || null,
+          valorTotalManual: bulkValueField === "valorTotalManual" ? Number(bulkValueAmount) : null,
+        };
+        await apiFetch(`/descritivos/${openDescritivo.id}/linhas/${linha.id}`, {
+          method: "PUT",
+          body: payload,
+          token,
+        });
+      }
+      await openDescritivoDetail(openDescritivo.id);
+      clearSelecaoLinhas();
+      closeBulkValueModal();
+    } catch (err) {
+      setBulkValueError(err.message || "Não foi possível aplicar o valor para as lojas selecionadas.");
+    } finally {
+      setApplyingBulkValue(false);
+    }
+  }
+
+  async function confirmBulkDelete() {
+    setDeletingBulk(true);
+    try {
+      const linhasSelecionadas = openDescritivo.linhas.filter((l) => selectedLinhaIds.has(l.id));
+      for (const linha of linhasSelecionadas) {
+        await apiFetch(`/descritivos/${openDescritivo.id}/linhas/${linha.id}`, {
+          method: "DELETE",
+          token,
+        });
+      }
+      await openDescritivoDetail(openDescritivo.id);
+      clearSelecaoLinhas();
+      setBulkDeleteConfirmOpen(false);
+    } catch (err) {
+      setBulkDeleteConfirmOpen(false);
+      setError(err.message || "Não foi possível excluir as lojas selecionadas.");
+    } finally {
+      setDeletingBulk(false);
+    }
+  }
+
   const clienteSelecionado = clientes.find((c) => String(c.id) === String(selectedClienteId));
   const filteredClientes = clientes.filter((c) =>
     (c.name || "").toLowerCase().includes(clienteSearch.trim().toLowerCase())
+  );
+
+  const descritivosOrdenados = [...descritivos].sort(
+    (a, b) => b.ano - a.ano || b.mes - a.mes || a.id - b.id
+  );
+  const filteredDescritivos = descritivosOrdenados.filter((d) =>
+    descritivoLabel(d).toLowerCase().includes(mesSearch.trim().toLowerCase())
   );
 
   return (
@@ -392,23 +563,42 @@ export default function Descritivos() {
         </div>
 
         {selectedClienteId && (
-          <div className="min-w-[220px]">
+          <div className="relative min-w-[220px]">
             <label className="mb-1 block text-sm font-medium text-neutral-700">Mês do descritivo</label>
-            <select
-              value={openDescritivo?.id || ""}
-              onChange={(e) => e.target.value && openDescritivoDetail(e.target.value)}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
-            >
-              {descritivos.length === 0 && <option value="">Nenhum descritivo ainda</option>}
-              {[...descritivos]
-                .sort((a, b) => b.ano - a.ano || b.mes - a.mes || a.id - b.id)
-                .map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {MESES[d.mes - 1]}/{d.ano}
-                    {d.rotuloExibicao ? ` — ${d.rotuloExibicao}` : ""}
-                  </option>
-                ))}
-            </select>
+            <input
+              type="text"
+              value={mesSearch}
+              onChange={(e) => handleMesInputChange(e.target.value)}
+              onFocus={handleMesInputFocus}
+              onBlur={handleMesInputBlur}
+              disabled={descritivos.length === 0}
+              placeholder={descritivos.length === 0 ? "Nenhum descritivo ainda" : "Buscar mês, ano ou rótulo..."}
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100 disabled:bg-neutral-100 disabled:text-neutral-400"
+            />
+
+            {showMesSuggestions && descritivos.length > 0 && (
+              <div className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-neutral-200 bg-white shadow-lg">
+                {filteredDescritivos.length === 0 ? (
+                  <p className="px-3 py-2 text-sm text-neutral-400">Nenhum descritivo encontrado.</p>
+                ) : (
+                  filteredDescritivos.map((d) => (
+                    <button
+                      key={d.id}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => handlePickDescritivo(d)}
+                      className={`block w-full px-3 py-2 text-left text-sm hover:bg-orange-50 ${
+                        String(d.id) === String(openDescritivo?.id)
+                          ? "bg-orange-50 font-medium text-orange-700"
+                          : "text-neutral-700"
+                      }`}
+                    >
+                      {descritivoLabel(d)}
+                    </button>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -473,7 +663,7 @@ export default function Descritivos() {
                 <p className="text-lg font-semibold text-black">{formatCurrency(openDescritivo.valorTotalGeral)}</p>
               </div>
               <button
-                onClick={handleGerarProximoMes}
+                onClick={() => setGerarProximoMesConfirmOpen(true)}
                 disabled={gerandoProximoMes}
                 className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-60"
               >
@@ -492,18 +682,69 @@ export default function Descritivos() {
             <p className="text-sm text-neutral-500">
               {openDescritivo.linhas.length} loja{openDescritivo.linhas.length !== 1 ? "s" : ""} nesse mês
             </p>
-            <button
-              onClick={openNewLinha}
-              className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-orange-600"
-            >
-              + Adicionar loja
-            </button>
+            <div className="flex items-center gap-2">
+              {openDescritivo.linhas.length > 0 && (
+                <button
+                  type="button"
+                  onClick={toggleSelectionMode}
+                  className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+                    selectionMode
+                      ? "border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100"
+                      : "border-neutral-300 text-neutral-700 hover:bg-neutral-100"
+                  }`}
+                >
+                  {selectionMode ? "Cancelar seleção" : "Selecionar várias"}
+                </button>
+              )}
+              <button
+                onClick={openNewLinha}
+                className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-orange-600"
+              >
+                + Adicionar loja
+              </button>
+            </div>
           </div>
+
+          {selectionMode && (
+            <div className="mx-6 mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-orange-200 bg-orange-50 px-4 py-3">
+              <p className="text-sm font-medium text-orange-800">
+                {selectedLinhaIds.size} loja{selectedLinhaIds.size !== 1 ? "s" : ""} selecionada
+                {selectedLinhaIds.size !== 1 ? "s" : ""}
+              </p>
+              <button
+                type="button"
+                onClick={openBulkValueModal}
+                disabled={selectedLinhaIds.size === 0}
+                className="rounded-lg border border-orange-300 bg-white px-3 py-1.5 text-sm font-medium text-orange-700 hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Mudar valor
+              </button>
+              <button
+                type="button"
+                onClick={() => setBulkDeleteConfirmOpen(true)}
+                disabled={selectedLinhaIds.size === 0}
+                className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Excluir selecionadas
+              </button>
+            </div>
+          )}
 
           <div className="overflow-x-auto p-6">
             <table className="w-full text-left text-sm">
               <thead className="bg-black text-white">
                 <tr>
+                  {selectionMode && (
+                    <th className="px-3 py-3 font-medium">
+                      <input
+                        type="checkbox"
+                        checked={openDescritivo.linhas.length > 0 && selectedLinhaIds.size === openDescritivo.linhas.length}
+                        onChange={toggleTodasLinhas}
+                        disabled={openDescritivo.linhas.length === 0}
+                        className="h-4 w-4 rounded border-neutral-300 text-orange-500 focus:ring-orange-400"
+                      />
+                    </th>
+                  )}
                   <th className="px-3 py-3 font-medium">Nº</th>
                   <th className="px-3 py-3 font-medium">CNPJ</th>
                   <th className="px-3 py-3 font-medium">Loja</th>
@@ -511,19 +752,33 @@ export default function Descritivos() {
                   <th className="px-3 py-3 font-medium">Valor/hora</th>
                   <th className="px-3 py-3 font-medium">Data</th>
                   <th className="px-3 py-3 font-medium">Valor total</th>
+                  <th className="px-3 py-3 font-medium">UF</th>
                   <th className="px-3 py-3 font-medium text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-100">
                 {openDescritivo.linhas.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="px-3 py-8 text-center text-neutral-400">
+                    <td colSpan={selectionMode ? "10" : "9"} className="px-3 py-8 text-center text-neutral-400">
                       Nenhuma loja adicionada nesse descritivo ainda.
                     </td>
                   </tr>
                 ) : (
                   openDescritivo.linhas.map((linha) => (
-                    <tr key={linha.id} className="hover:bg-orange-50/40">
+                    <tr
+                      key={linha.id}
+                      className={`hover:bg-orange-50/40 ${selectedLinhaIds.has(linha.id) ? "bg-orange-50/60" : ""}`}
+                    >
+                      {selectionMode && (
+                        <td className="px-3 py-3">
+                          <input
+                            type="checkbox"
+                            checked={selectedLinhaIds.has(linha.id)}
+                            onChange={() => toggleLinhaSelecionada(linha.id)}
+                            className="h-4 w-4 rounded border-neutral-300 text-orange-500 focus:ring-orange-400"
+                          />
+                        </td>
+                      )}
                       <td className="px-3 py-3 text-neutral-500">{linha.numero}</td>
                       <td className="px-3 py-3 text-neutral-600">{linha.lojaCnpj || "-"}</td>
                       <td className="px-3 py-3 font-medium text-neutral-800">{linha.lojaNome}</td>
@@ -538,6 +793,7 @@ export default function Descritivos() {
                           <span className="ml-2 rounded-full bg-neutral-100 px-2 py-0.5 text-xs text-neutral-500">manual</span>
                         )}
                       </td>
+                      <td className="px-3 py-3 text-neutral-600">{linha.lojaUf || "-"}</td>
                       <td className="px-3 py-3 text-right">
                         <button
                           onClick={() => openEditLinha(linha)}
@@ -790,11 +1046,132 @@ export default function Descritivos() {
         </div>
       )}
 
+      {gerarProximoMesConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+            <h2 className="mb-2 text-lg font-semibold text-black">Gerar próximo mês</h2>
+            <p className="mb-6 text-sm text-neutral-600">
+              Tem certeza que deseja gerar o descritivo do próximo mês a partir deste? Todas as lojas e configurações
+              deste mês serão copiadas para o mês seguinte.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setGerarProximoMesConfirmOpen(false)}
+                disabled={gerandoProximoMes}
+                className="rounded-lg px-4 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-100"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleGerarProximoMes}
+                disabled={gerandoProximoMes}
+                className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-orange-600 disabled:opacity-60"
+              >
+                {gerandoProximoMes ? "Gerando..." : "Sim, gerar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isBulkValueModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mb-6 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-black">Mudar valor em massa</h2>
+              <button onClick={closeBulkValueModal} className="text-neutral-400 hover:text-black" type="button">
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleApplyBulkValue} className="space-y-4">
+              <p className="text-sm text-neutral-500">
+                Aplicar novo valor em {selectedLinhaIds.size} loja{selectedLinhaIds.size !== 1 ? "s" : ""} selecionada
+                {selectedLinhaIds.size !== 1 ? "s" : ""}.
+              </p>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-neutral-700">Qual campo alterar</label>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm text-neutral-700">
+                    <input
+                      type="radio"
+                      name="bulkValueField"
+                      value="valorHora"
+                      checked={bulkValueField === "valorHora"}
+                      onChange={() => setBulkValueField("valorHora")}
+                      className="h-4 w-4 border-neutral-300 text-orange-500 focus:ring-orange-400"
+                    />
+                    Valor da hora
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-neutral-700">
+                    <input
+                      type="radio"
+                      name="bulkValueField"
+                      value="valorTotalManual"
+                      checked={bulkValueField === "valorTotalManual"}
+                      onChange={() => setBulkValueField("valorTotalManual")}
+                      className="h-4 w-4 border-neutral-300 text-orange-500 focus:ring-orange-400"
+                    />
+                    Valor total (fixo/manual)
+                  </label>
+                </div>
+                {bulkValueField === "valorHora" && (
+                  <p className="mt-2 text-xs text-neutral-400">
+                    Se alguma loja selecionada tiver valor total manual, ele será desativado e o total volta a ser
+                    calculado automaticamente pelo valor da hora.
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-neutral-700">Novo valor (R$)</label>
+                <CurrencyInput
+                  value={bulkValueAmount}
+                  onChange={setBulkValueAmount}
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+                />
+              </div>
+
+              {bulkValueError && (
+                <div className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{bulkValueError}</div>
+              )}
+
+              <div className="flex justify-end gap-3 border-t border-neutral-100 pt-4">
+                <button
+                  type="button"
+                  onClick={closeBulkValueModal}
+                  className="rounded-lg px-4 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-100"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={applyingBulkValue}
+                  className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-orange-600 disabled:opacity-60"
+                >
+                  {applyingBulkValue ? "Aplicando..." : "Aplicar"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <ConfirmDeleteDialog
         open={deleteLinhaTarget !== null}
         onClose={() => setDeleteLinhaTarget(null)}
         onConfirmed={confirmDeleteLinha}
         itemLabel="esta loja do descritivo"
+      />
+
+      <ConfirmDeleteDialog
+        open={bulkDeleteConfirmOpen}
+        onClose={() => setBulkDeleteConfirmOpen(false)}
+        onConfirmed={confirmBulkDelete}
+        itemLabel={`estas ${selectedLinhaIds.size} loja(s) do descritivo`}
       />
 
       <ConfirmDeleteDialog
