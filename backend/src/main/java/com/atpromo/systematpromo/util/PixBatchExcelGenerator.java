@@ -56,10 +56,11 @@ public class PixBatchExcelGenerator {
                 String pixType = payment.getPixType();
 
                 row.createCell(0).setCellValue(registrationTypeCode(document));
-                row.createCell(1).setCellValue(payment.getDocument() != null ? payment.getDocument() : "");
-                row.createCell(2).setCellValue(payment.getName() != null ? payment.getName().toUpperCase(Locale.ROOT) : "");
+                row.createCell(1).setCellValue(sanitizeForExcel(payment.getDocument()));
+                row.createCell(2).setCellValue(sanitizeForExcel(
+                        payment.getName() != null ? payment.getName().toUpperCase(Locale.ROOT) : null));
                 row.createCell(3).setCellValue(pixKeyTypeCode(pixType));
-                row.createCell(4).setCellValue(payment.getPix() != null ? payment.getPix() : "");
+                row.createCell(4).setCellValue(sanitizeForExcel(payment.getPix()));
 
                 Cell amountCell = row.createCell(5);
                 amountCell.setCellValue(payment.getAmount() != null ? payment.getAmount().doubleValue() : 0);
@@ -111,6 +112,25 @@ public class PixBatchExcelGenerator {
 
     private static String onlyNumbers(String value) {
         return value == null ? "" : value.replaceAll("\\D", "");
+    }
+
+    // ACHADO H5: nome do promotor e chave Pix eram gravados na celula sem
+    // nenhum tratamento contra "formula injection" (nomes/chaves comecando
+    // com =, +, - ou @, que planilhas como Excel/LibreOffice podem
+    // interpretar como formula ao abrir o arquivo). Prefixar com apostrofo
+    // forca a celula a ser tratada como texto puro, seguindo a mitigacao
+    // recomendada pela OWASP para CSV/Excel injection. Aplicado tambem ao
+    // documento (coluna 1), que e a mesma categoria de texto vindo do
+    // cadastro do promotor.
+    private static String sanitizeForExcel(String value) {
+        if (value == null || value.isEmpty()) {
+            return "";
+        }
+        char first = value.charAt(0);
+        if (first == '=' || first == '+' || first == '-' || first == '@') {
+            return "'" + value;
+        }
+        return value;
     }
 
     private static CellStyle createHeaderStyle(Workbook workbook) {

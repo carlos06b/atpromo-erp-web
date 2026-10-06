@@ -16,6 +16,7 @@ import {
     IconKey,
     IconStore,
     IconFileSpreadsheet,
+    IconLandmark,
     IconLogOut,
 } from "./icons";
 
@@ -27,6 +28,7 @@ const navItems = [
     { to: "/faturamento", page: "faturamento", label: "Faturamento", icon: IconWallet },
     { to: "/folha-pagamento", page: "folha-pagamento", label: "Folha de pagamento", icon: IconCreditCard },
     { to: "/despesas", page: "despesas", label: "Despesas", icon: IconReceipt },
+    { to: "/extrato", page: "extrato", label: "Extrato", icon: IconLandmark },
     { to: "/relatorios", page: "relatorios", label: "Relatórios", icon: IconChartBar },
     { to: "/indicadores-rh", page: "indicadores-rh", label: "Indicadores RH", icon: IconChartPie },
     { to: "/uniformes", page: "uniformes", label: "Uniformes e materiais", icon: IconShirt },

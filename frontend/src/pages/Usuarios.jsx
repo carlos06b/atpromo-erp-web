@@ -149,11 +149,11 @@ export default function Usuarios() {
         }
     }
 
-    async function handleDeleteConfirmed() {
+    async function handleDeleteConfirmed(ticket) {
         if (!userToDelete) return;
         setDeleteError("");
         try {
-            await apiFetch(`/users/${userToDelete.id}`, { method: "DELETE", token });
+            await apiFetch(`/users/${userToDelete.id}`, { method: "DELETE", token, deleteTicket: ticket });
             setUserToDelete(null);
             loadUsers();
         } catch (err) {

@@ -422,26 +422,27 @@ export default function Despesas() {
 
       setSavingVariable(true);
       const amounts = splitAmountInInstallments(variableForm.totalAmount, count);
+      const dates = amounts.map((_, i) => addMonthsIso(variableForm.date, i));
       const groupId = `parc-${Date.now()}`;
 
+      // ACHADO H6: antes eram N chamadas POST sequenciais e independentes
+      // (uma por parcela) — se uma falhasse no meio, as parcelas anteriores
+      // já ficavam salvas, e tentar de novo duplicava tudo com um novo
+      // groupId. Agora é uma única chamada para um endpoint que grava todas
+      // as parcelas numa transação só no backend: ou todas são criadas, ou
+      // nenhuma é (em caso de erro, nada fica salvo parcialmente).
       try {
-        for (let i = 0; i < count; i++) {
-          await apiFetch("/variable-expenses", {
-            method: "POST",
-            body: {
-              name: variableForm.name,
-              amount: amounts[i],
-              date: addMonthsIso(variableForm.date, i),
-              status: false,
-              paymentDate: null,
-              description: variableForm.description === "" ? null : variableForm.description,
-              installmentGroup: groupId,
-              installmentNumber: i + 1,
-              totalInstallments: count,
-            },
-            token,
-          });
-        }
+        await apiFetch("/variable-expenses/installment-plan", {
+          method: "POST",
+          body: {
+            name: variableForm.name,
+            description: variableForm.description === "" ? null : variableForm.description,
+            amounts,
+            dates,
+            installmentGroup: groupId,
+          },
+          token,
+        });
         closeVariableForm();
         await loadData();
       } catch (err) {
@@ -484,7 +485,7 @@ export default function Despesas() {
     setDeleteTarget({ kind, id });
   }
 
-  async function confirmDelete() {
+  async function confirmDelete(ticket) {
     const { kind, id } = deleteTarget;
     const path =
       kind === "fixed"
@@ -494,7 +495,7 @@ export default function Despesas() {
         : `/variable-expenses/${id}`;
 
     try {
-      await apiFetch(path, { method: "DELETE", token });
+      await apiFetch(path, { method: "DELETE", token, deleteTicket: ticket });
       setDeleteTarget(null);
       await loadData();
     } catch (err) {

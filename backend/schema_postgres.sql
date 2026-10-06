@@ -4,6 +4,36 @@ BEGIN;
 -- Tabelas (sem foreign keys ainda, pra não depender de ordem)
 -- =========================================================
 
+-- ACHADO M2: as 9 tabelas abaixo (beneficiario até loja, na ordem
+-- alfabética do arquivo) existem como @Entity no código Java mas não
+-- existiam aqui. loja/descritivo/descritivo_linha já foram criadas em
+-- produção por backend/migration_loja_postgres.sql; as 6 tabelas do
+-- módulo de Extrato (empresa, conta_bancaria, beneficiario,
+-- categoria_lancamento, centro_custo, lancamento_extrato) ainda não —
+-- o código desse módulo está em andamento e ainda não foi commitado.
+-- Este arquivo é só o bootstrap de uma instalação NOVA; ele não é
+-- reaplicado sobre um banco que já existe.
+
+CREATE TABLE beneficiario (
+    id              SERIAL PRIMARY KEY,
+    nome            VARCHAR(255),
+    promoter_id     INTEGER,
+    client_id       INTEGER,
+    ativo           BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE categoria_lancamento (
+    id      SERIAL PRIMARY KEY,
+    nome    VARCHAR(255),
+    ativo   BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE centro_custo (
+    id      SERIAL PRIMARY KEY,
+    nome    VARCHAR(255),
+    ativo   BOOLEAN NOT NULL DEFAULT TRUE
+);
+
 CREATE TABLE client (
     id              SERIAL PRIMARY KEY,
     corporate_name  VARCHAR(150),
@@ -14,6 +44,47 @@ CREATE TABLE client (
     active          BOOLEAN NOT NULL DEFAULT TRUE,
     company_link    VARCHAR(10),
     CONSTRAINT uq_client_cnpj UNIQUE (cnpj)
+);
+
+CREATE TABLE conta_bancaria (
+    id                  SERIAL PRIMARY KEY,
+    empresa_id          INTEGER,
+    banco               VARCHAR(255),
+    apelido             VARCHAR(255),
+    agencia             VARCHAR(255),
+    numero_conta        VARCHAR(255),
+    saldo_inicial       DECIMAL(12,2),
+    data_saldo_inicial  DATE,
+    ativa               BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE descritivo (
+    id          SERIAL PRIMARY KEY,
+    cliente_id  INTEGER NOT NULL,
+    mes         INTEGER NOT NULL,
+    ano         INTEGER NOT NULL,
+    CONSTRAINT uq_descritivo_cliente_mes_ano UNIQUE (cliente_id, mes, ano)
+);
+
+CREATE TABLE descritivo_linha (
+    id                      SERIAL PRIMARY KEY,
+    descritivo_id           INTEGER NOT NULL,
+    loja_id                 INTEGER NOT NULL,
+    dias_semana             VARCHAR(20) NOT NULL,
+    horas_por_atendimento   DECIMAL(5,2) NOT NULL,
+    valor_hora              DECIMAL(12,2) NOT NULL,
+    data_inicio             DATE NOT NULL,
+    data_fim                DATE,
+    valor_total             DECIMAL(12,2) NOT NULL,
+    valor_total_manual      BOOLEAN NOT NULL DEFAULT FALSE,
+    ordem                   INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE empresa (
+    id      SERIAL PRIMARY KEY,
+    nome    VARCHAR(255),
+    cnpj    VARCHAR(255),
+    ativa   BOOLEAN NOT NULL DEFAULT TRUE
 );
 
 CREATE TABLE finance_promoter (
@@ -68,6 +139,31 @@ CREATE TABLE invoice (
     status              VARCHAR(20) NOT NULL DEFAULT 'PENDENTE'
 );
 
+CREATE TABLE lancamento_extrato (
+    id                  SERIAL PRIMARY KEY,
+    conta_bancaria_id   INTEGER,
+    data                DATE,
+    tipo                VARCHAR(255),
+    valor               DECIMAL(12,2),
+    descricao           TEXT,
+    origem_tipo         VARCHAR(255),
+    origem_id           INTEGER,
+    beneficiario_id     INTEGER,
+    categoria_id        INTEGER,
+    centro_custo_id     INTEGER,
+    created_at          TIMESTAMP
+);
+
+CREATE TABLE loja (
+    id      SERIAL PRIMARY KEY,
+    nome    VARCHAR(255) NOT NULL,
+    rede    VARCHAR(255),
+    uf      VARCHAR(255),
+    cnpj    VARCHAR(20),
+    active  BOOLEAN NOT NULL DEFAULT TRUE,
+    CONSTRAINT uq_loja_cnpj UNIQUE (cnpj)
+);
+
 CREATE TABLE password_reset_request (
     id              SERIAL PRIMARY KEY,
     email           VARCHAR(255) NOT NULL,
@@ -89,7 +185,7 @@ CREATE TABLE promoter (
     type                VARCHAR(20),
     pix                 VARCHAR(150),
     pix_type            VARCHAR(20),
-    store               VARCHAR(255),
+    loja_id             INTEGER,
     admission_date      DATE,
     termination_date    DATE,
     CONSTRAINT uq_promoter_cpf UNIQUE (cpf)
@@ -152,6 +248,31 @@ CREATE TABLE work_item_delivery (
 -- Foreign keys (agora que todas as tabelas já existem)
 -- =========================================================
 
+ALTER TABLE beneficiario
+    ADD CONSTRAINT fk_beneficiario_promoter FOREIGN KEY (promoter_id) REFERENCES promoter (idpromoter),
+    ADD CONSTRAINT fk_beneficiario_client FOREIGN KEY (client_id) REFERENCES client (id);
+
+CREATE INDEX idx_beneficiario_client_id ON beneficiario (client_id);
+
+ALTER TABLE conta_bancaria
+    ADD CONSTRAINT fk_conta_bancaria_empresa FOREIGN KEY (empresa_id) REFERENCES empresa (id);
+
+ALTER TABLE descritivo
+    ADD CONSTRAINT fk_descritivo_client FOREIGN KEY (cliente_id) REFERENCES client (id);
+
+ALTER TABLE descritivo_linha
+    ADD CONSTRAINT fk_descritivo_linha_descritivo FOREIGN KEY (descritivo_id) REFERENCES descritivo (id),
+    ADD CONSTRAINT fk_descritivo_linha_loja FOREIGN KEY (loja_id) REFERENCES loja (id);
+
+ALTER TABLE lancamento_extrato
+    ADD CONSTRAINT fk_lancamento_extrato_conta FOREIGN KEY (conta_bancaria_id) REFERENCES conta_bancaria (id),
+    ADD CONSTRAINT fk_lancamento_extrato_beneficiario FOREIGN KEY (beneficiario_id) REFERENCES beneficiario (id),
+    ADD CONSTRAINT fk_lancamento_extrato_categoria FOREIGN KEY (categoria_id) REFERENCES categoria_lancamento (id),
+    ADD CONSTRAINT fk_lancamento_extrato_centro_custo FOREIGN KEY (centro_custo_id) REFERENCES centro_custo (id);
+
+ALTER TABLE promoter
+    ADD CONSTRAINT fk_promoter_loja FOREIGN KEY (loja_id) REFERENCES loja (id);
+
 ALTER TABLE finance_promoter
     ADD CONSTRAINT fk_fp_promoter FOREIGN KEY (id_promoter) REFERENCES promoter (idpromoter);
 
@@ -175,18 +296,22 @@ ALTER TABLE work_item_delivery
     ADD CONSTRAINT fk_work_item_delivery_promoter FOREIGN KEY (promoter_id) REFERENCES promoter (idpromoter);
 
 -- =========================================================
--- Usuário admin de teste, pra você conseguir logar assim que
--- o backend subir no Render (banco novo = zero usuários).
--- login: admin@atpromo.com   |   senha: Teste123!
--- (troca a senha depois, isso é só pra testar o deploy)
+-- Usuário admin inicial — SEM senha fixa commitada neste arquivo
+-- (achado C1 da auditoria de 05/10/2026: havia uma senha de teste em
+-- texto claro aqui, num repositório público, usada pra popular o banco
+-- de produção no Render).
+--
+-- Depois de rodar este script num banco novo, crie o admin manualmente:
+--   1. Gere um hash bcrypt (custo 12) da senha que você vai usar de verdade.
+--   2. Rode, substituindo <SEU_EMAIL> e <HASH_BCRYPT_AQUI>:
+--        INSERT INTO "user" (name, email, password, jobTittle)
+--        VALUES ('Admin', '<SEU_EMAIL>', '<HASH_BCRYPT_AQUI>', 'ADMIN');
+--   3. Nunca commite esse INSERT com o hash real preenchido.
+--
+-- AÇÃO NECESSÁRIA SUA: se este script já rodou em produção com o admin de
+-- teste antigo (admin@atpromo.com), troque a senha dessa conta
+-- agora mesmo — eu não tenho (e não devo ter) acesso ao banco de produção
+-- pra fazer isso por você.
 -- =========================================================
-
-INSERT INTO "user" (name, email, password, jobTittle)
-VALUES (
-    'Admin Teste',
-    'admin@atpromo.com',
-    '$2b$12$rXOaEBy6d5wCkCjrUILzJubM/LehN8Sp5MdDn96cdzOOsUHzWN7mq',
-    'ADMIN'
-);
 
 COMMIT;

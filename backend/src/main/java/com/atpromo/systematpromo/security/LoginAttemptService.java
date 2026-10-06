@@ -14,8 +14,18 @@ public class LoginAttemptService {
 
     private final ConcurrentHashMap<String, Attempt> attempts = new ConcurrentHashMap<>();
 
-    public boolean isBlocked(String email) {
-        String key = normalize(email);
+    // ACHADO H4: a chave do bloqueio era só o email normalizado, sem IP nem
+    // qualquer outro fator - qualquer pessoa sem credencial alguma, sabendo
+    // só o email de um colega, conseguia errar a senha 5 vezes de propósito
+    // e trancar o login dele por 15 min, de qualquer lugar. Agora a chave
+    // combina email + IP: o bloqueio passa a valer para "este email tentado
+    // a partir deste IP", então um atacante trancando a conta da vítima a
+    // partir do PRÓPRIO IP não impede a vítima de logar normalmente a
+    // partir do IP dela. Isso não piora a proteção contra força bruta (o
+    // mesmo IP ainda é bloqueado após 5 tentativas), só deixa de ser trivial
+    // trancar remotamente a conta de outra pessoa.
+    public boolean isBlocked(String email, String ip) {
+        String key = key(email, ip);
         Attempt attempt = attempts.get(key);
 
         if (attempt == null || attempt.lockedUntil == null) {
@@ -30,8 +40,8 @@ public class LoginAttemptService {
         return false;
     }
 
-    public long minutesRemaining(String email) {
-        Attempt attempt = attempts.get(normalize(email));
+    public long minutesRemaining(String email, String ip) {
+        Attempt attempt = attempts.get(key(email, ip));
         if (attempt == null || attempt.lockedUntil == null) {
             return 0;
         }
@@ -39,8 +49,8 @@ public class LoginAttemptService {
         return Math.max(1, (secondsLeft + 59) / 60);
     }
 
-    public void registerFailure(String email) {
-        String key = normalize(email);
+    public void registerFailure(String email, String ip) {
+        String key = key(email, ip);
         Attempt attempt = attempts.computeIfAbsent(key, k -> new Attempt());
         attempt.count++;
         if (attempt.count >= MAX_ATTEMPTS) {
@@ -48,8 +58,12 @@ public class LoginAttemptService {
         }
     }
 
-    public void registerSuccess(String email) {
-        attempts.remove(normalize(email));
+    public void registerSuccess(String email, String ip) {
+        attempts.remove(key(email, ip));
+    }
+
+    private String key(String email, String ip) {
+        return normalize(email) + "|" + (ip == null ? "" : ip.trim());
     }
 
     private String normalize(String email) {

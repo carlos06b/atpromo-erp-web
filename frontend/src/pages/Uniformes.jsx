@@ -156,9 +156,9 @@ export default function Uniformes() {
     setDeleteTarget(id);
   }
 
-  async function confirmDelete() {
+  async function confirmDelete(ticket) {
     try {
-      await apiFetch(`/work-item-deliveries/${deleteTarget}`, { method: "DELETE", token });
+      await apiFetch(`/work-item-deliveries/${deleteTarget}`, { method: "DELETE", token, deleteTicket: ticket });
       setDeleteTarget(null);
       await loadData();
     } catch (err) {

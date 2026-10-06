@@ -194,9 +194,9 @@ export default function FolhaDePagamento() {
         setDeleteTarget(id);
     }
 
-    async function confirmDelete() {
+    async function confirmDelete(ticket) {
         try {
-            await apiFetch(`/finance-promoter/${deleteTarget}`, { method: "DELETE", token });
+            await apiFetch(`/finance-promoter/${deleteTarget}`, { method: "DELETE", token, deleteTicket: ticket });
             setDeleteTarget(null);
             await loadData();
         } catch (err) {

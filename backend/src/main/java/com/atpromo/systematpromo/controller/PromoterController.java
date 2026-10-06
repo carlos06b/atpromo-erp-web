@@ -32,16 +32,22 @@ public class PromoterController {
     ) {}
 
     @GetMapping
-    public List<PromoterView> listAll(Authentication authentication) {
+    public ResponseEntity<?> listAll(Authentication authentication) {
+        if (!accessControl.isKnownRole(authentication)) {
+            return forbidden();
+        }
         boolean hideSalary = accessControl.isSupervisor(authentication);
-        return promoterRepository.findAll().stream().map(p -> toView(p, hideSalary)).toList();
+        return ResponseEntity.ok(promoterRepository.findAll().stream().map(p -> toView(p, hideSalary)).toList());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PromoterView> getById(@PathVariable int id, Authentication authentication) {
+    public ResponseEntity<?> getById(@PathVariable int id, Authentication authentication) {
+        if (!accessControl.isKnownRole(authentication)) {
+            return forbidden();
+        }
         boolean hideSalary = accessControl.isSupervisor(authentication);
         return promoterRepository.findById(id)
-                .map(p -> ResponseEntity.ok(toView(p, hideSalary)))
+                .map(p -> ResponseEntity.ok((Object) toView(p, hideSalary)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
@@ -79,7 +85,7 @@ public class PromoterController {
     }
 
     private boolean canWrite(Authentication authentication) {
-        return !accessControl.isFinance(authentication) && !accessControl.isSupervisor(authentication);
+        return accessControl.isRh(authentication) || accessControl.isAdmin(authentication);
     }
 
     private PromoterView toView(Promoter p, boolean hideSalary) {

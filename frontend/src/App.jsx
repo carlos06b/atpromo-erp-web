@@ -7,6 +7,7 @@ import Descritivos from "./pages/Descritivos";
 import Faturamento from "./pages/Faturamento";
 import FolhaDePagamento from "./pages/FolhaDePagamento";
 import Despesas from "./pages/Despesas";
+import Extrato from "./pages/Extrato";
 import Relatorios from "./pages/Relatorios";
 import IndicadoresRH from "./pages/IndicadoresRH";
 import Uniformes from "./pages/Uniformes";
@@ -73,6 +74,14 @@ function App() {
                 element={
                     <ProtectedRoute page="despesas">
                         <Despesas />
+                    </ProtectedRoute>
+                }
+            />
+            <Route
+                path="/extrato"
+                element={
+                    <ProtectedRoute page="extrato">
+                        <Extrato />
                     </ProtectedRoute>
                 }
             />

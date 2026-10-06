@@ -171,9 +171,9 @@ export default function Faturamento() {
     setDeleteTarget(id);
   }
 
-  async function confirmDelete() {
+  async function confirmDelete(ticket) {
     try {
-      await apiFetch(`/invoices/${deleteTarget}`, { method: "DELETE", token });
+      await apiFetch(`/invoices/${deleteTarget}`, { method: "DELETE", token, deleteTicket: ticket });
       setDeleteTarget(null);
       await loadData();
     } catch (err) {

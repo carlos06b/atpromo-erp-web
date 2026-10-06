@@ -52,9 +52,14 @@ public class AuthController {
     public record ForgotPasswordRequest(String email) {}
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        if (loginAttemptService.isBlocked(request.email())) {
-            long minutes = loginAttemptService.minutesRemaining(request.email());
+    public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
+        // ACHADO H4: o bloqueio agora é por email + IP (ver LoginAttemptService),
+        // para que trancar a conta de outra pessoa exija estar atrás do
+        // mesmo IP que ela, em vez de bastar saber o email.
+        String ip = clientIp(httpRequest);
+
+        if (loginAttemptService.isBlocked(request.email(), ip)) {
+            long minutes = loginAttemptService.minutesRemaining(request.email(), ip);
             return ResponseEntity.status(429).body(Map.of(
                     "message",
                     "Muitas tentativas de login com esse e-mail. Tente novamente em cerca de " + minutes + " minuto(s)."
@@ -64,18 +69,18 @@ public class AuthController {
         Optional<User> userOpt = userRepository.findByEmail(request.email());
 
         if (userOpt.isEmpty()) {
-            loginAttemptService.registerFailure(request.email());
+            loginAttemptService.registerFailure(request.email(), ip);
             return ResponseEntity.status(401).body("Email ou senha inválidos.");
         }
 
         User user = userOpt.get();
 
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            loginAttemptService.registerFailure(request.email());
+            loginAttemptService.registerFailure(request.email(), ip);
             return ResponseEntity.status(401).body("Email ou senha inválidos.");
         }
 
-        loginAttemptService.registerSuccess(request.email());
+        loginAttemptService.registerSuccess(request.email(), ip);
 
         boolean remember = Boolean.TRUE.equals(request.rememberMe());
         String token = remember
@@ -119,11 +124,17 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("message", FORGOT_PASSWORD_GENERIC_MESSAGE));
     }
 
+    // ACHADO H3: antes confiava sem validacao no header X-Forwarded-For,
+    // que e enviado pelo PROPRIO cliente - bastava variar esse header a
+    // cada chamada para nunca bater o limite de 5 solicitacoes/hora por IP
+    // em PasswordResetLimiter. Agora usamos so request.getRemoteAddr(), que
+    // e o IP da conexao TCP real (nao controlavel pelo cliente). Se esta
+    // aplicacao algum dia ficar atras de um proxy confiavel que precise
+    // reescrever o IP (ex. um load balancer que normalize X-Forwarded-For),
+    // isso deve voltar a usar o header, mas validando explicitamente que a
+    // requisicao veio desse proxy confiavel - nunca confiando no primeiro
+    // valor do header como estava antes.
     private String clientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
         return request.getRemoteAddr();
     }
 }

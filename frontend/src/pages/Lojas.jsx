@@ -147,10 +147,10 @@ export default function Lojas() {
     setDeleteTarget(id);
   }
 
-  async function confirmDelete() {
+  async function confirmDelete(ticket) {
     setDeleteError("");
     try {
-      await apiFetch(`/lojas/${deleteTarget}`, { method: "DELETE", token });
+      await apiFetch(`/lojas/${deleteTarget}`, { method: "DELETE", token, deleteTicket: ticket });
       setDeleteTarget(null);
       await loadLojas();
     } catch (err) {

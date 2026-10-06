@@ -36,8 +36,21 @@ public class AccessControl {
         return user != null && user.getJobTittle() != null && user.getJobTittle().trim().equalsIgnoreCase("SUPERVISOR");
     }
 
+    // ACHADO C2 (crítico) da auditoria de 05/10/2026: isAdmin() era um
+    // deny-list ("não é RH, nem FINANCEIRO, nem SUPERVISOR"), então qualquer
+    // jobTittle nulo, vazio ou desconhecido virava admin por acidente.
+    // Agora é um allow-list explícito: só é admin quem tem jobTittle "ADMIN".
     public boolean isAdmin(Authentication authentication) {
         User user = currentUser(authentication);
-        return user != null && !isRh(authentication) && !isFinance(authentication) && !isSupervisor(authentication);
+        return user != null && user.getJobTittle() != null && user.getJobTittle().trim().equalsIgnoreCase("ADMIN");
+    }
+
+    // Usado como checagem mínima (defesa em profundidade) em endpoints de
+    // leitura que precisam estar abertos a qualquer papel reconhecido do
+    // sistema, mas não a um jobTittle desconhecido/corrompido — ver
+    // PromoterController (achado C5).
+    public boolean isKnownRole(Authentication authentication) {
+        return isRh(authentication) || isFinance(authentication)
+                || isSupervisor(authentication) || isAdmin(authentication);
     }
 }

@@ -44,8 +44,13 @@ public class PayrollController {
             return forbidden();
         }
 
+        // ACHADO M4: antes, uma data inicial maior que a final lançava um
+        // RuntimeException cru, que o Spring convertia num HTTP 500 (erro de
+        // servidor) para o que é, na verdade, um erro de entrada do usuário.
+        // A regra de negócio não muda (continua rejeitado); só a resposta
+        // passa a ser um 400 com mensagem clara, em vez de um 500 genérico.
         if (start.isAfter(end)) {
-            throw new RuntimeException("Data inicial não pode ser maior que a final.");
+            return ResponseEntity.badRequest().body(Map.of("message", "Data inicial não pode ser maior que a final."));
         }
 
         List<Promoter> promoters = promoterRepository.findAll();

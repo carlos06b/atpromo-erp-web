@@ -1,11 +1,13 @@
 package com.atpromo.systematpromo.controller;
 
 import com.atpromo.systematpromo.model.FinancePromoter;
+import com.atpromo.systematpromo.model.LancamentoExtrato;
 import com.atpromo.systematpromo.model.Promoter;
 import com.atpromo.systematpromo.model.PromoterPaymentData;
 import com.atpromo.systematpromo.model.Request;
 import com.atpromo.systematpromo.model.User;
 import com.atpromo.systematpromo.repository.FinancePromoterRepository;
+import com.atpromo.systematpromo.repository.LancamentoExtratoRepository;
 import com.atpromo.systematpromo.repository.PromoterRepository;
 import com.atpromo.systematpromo.repository.RequestRepository;
 import com.atpromo.systematpromo.repository.UserRepository;
@@ -15,6 +17,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -50,15 +53,18 @@ public class RequestController {
     private final PromoterRepository promoterRepository;
     private final UserRepository userRepository;
     private final FinancePromoterRepository financePromoterRepository;
+    private final LancamentoExtratoRepository lancamentoExtratoRepository;
 
     public RequestController(RequestRepository requestRepository,
                              PromoterRepository promoterRepository,
                              UserRepository userRepository,
-                             FinancePromoterRepository financePromoterRepository) {
+                             FinancePromoterRepository financePromoterRepository,
+                             LancamentoExtratoRepository lancamentoExtratoRepository) {
         this.requestRepository = requestRepository;
         this.promoterRepository = promoterRepository;
         this.userRepository = userRepository;
         this.financePromoterRepository = financePromoterRepository;
+        this.lancamentoExtratoRepository = lancamentoExtratoRepository;
     }
 
     public record RequestTypeOption(String value, String label) {}
@@ -82,26 +88,40 @@ public class RequestController {
     public record CreateRequestBody(Integer promoterId, String type, BigDecimal amount, String message) {}
 
     @GetMapping("/types")
-    public List<RequestTypeOption> getTypes() {
-        return TYPE_LABELS.entrySet().stream()
+    public ResponseEntity<?> getTypes(Authentication authentication) {
+        if (!allowedToRead(authentication)) {
+            return forbidden();
+        }
+        return ResponseEntity.ok(TYPE_LABELS.entrySet().stream()
                 .map(entry -> new RequestTypeOption(entry.getKey(), entry.getValue()))
-                .toList();
+                .toList());
     }
 
     @GetMapping
-    public List<RequestResponse> listAll() {
-        return mapAll(requestRepository.findAll());
+    public ResponseEntity<?> listAll(Authentication authentication) {
+        if (!allowedToRead(authentication)) {
+            return forbidden();
+        }
+        return ResponseEntity.ok(mapAll(requestRepository.findAll()));
     }
 
     @GetMapping("/pending")
-    public List<RequestResponse> listPending() {
-        return mapAll(requestRepository.findByStatusIgnoreCase("PENDENTE"));
+    public ResponseEntity<?> listPending(Authentication authentication) {
+        if (!allowedToRead(authentication)) {
+            return forbidden();
+        }
+        return ResponseEntity.ok(mapAll(requestRepository.findByStatusIgnoreCase("PENDENTE")));
     }
 
     @GetMapping("/period")
     public ResponseEntity<?> listByPeriod(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
+            Authentication authentication) {
+
+        if (!allowedToRead(authentication)) {
+            return forbidden();
+        }
 
         if (start.isAfter(end)) {
             return badRequest("Data inicial não pode ser maior que a final.");
@@ -114,9 +134,12 @@ public class RequestController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<RequestResponse> getById(@PathVariable int id) {
+    public ResponseEntity<?> getById(@PathVariable int id, Authentication authentication) {
+        if (!allowedToRead(authentication)) {
+            return forbidden();
+        }
         return requestRepository.findById(id)
-                .map(r -> ResponseEntity.ok(mapOne(r)))
+                .map(r -> ResponseEntity.ok((Object) mapOne(r)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
@@ -165,6 +188,12 @@ public class RequestController {
         return ResponseEntity.status(201).body(mapOne(saved));
     }
 
+    // ACHADO H1: a aprovação usa um UPDATE condicional atômico
+    // (requestRepository.updateStatusIfPending) em vez do antigo padrão
+    // "ler status -> decidir em memória -> salvar", que permitia duas
+    // aprovações quase simultâneas lerem PENDENTE antes de qualquer uma
+    // commitar e gerarem dois pagamentos para a mesma solicitação.
+    @Transactional
     @PutMapping("/{id}/approve")
     public ResponseEntity<?> approve(@PathVariable int id, Authentication authentication) {
         User currentUser = currentUser(authentication);
@@ -178,18 +207,18 @@ public class RequestController {
             return ResponseEntity.notFound().build();
         }
 
-        if (!"PENDENTE".equalsIgnoreCase(request.getStatus())) {
-            return ResponseEntity.status(409).body(Map.of("message", "Apenas solicitações pendentes podem ser aprovadas."));
-        }
-
         Promoter promoter = promoterRepository.findById(request.getId_Promoter()).orElse(null);
         if (promoter == null) {
             return ResponseEntity.status(409).body(Map.of("message", "O promotor dessa solicitação não existe mais."));
         }
 
+        int updated = requestRepository.updateStatusIfPending(id, "APROVADO", currentUser.getId());
+        if (updated == 0) {
+            return ResponseEntity.status(409).body(Map.of("message", "Apenas solicitações pendentes podem ser aprovadas."));
+        }
+
         request.setId_UserFin(currentUser.getId());
         request.setStatus("APROVADO");
-        requestRepository.save(request);
 
         FinancePromoter finance = new FinancePromoter();
         finance.setIdPromoter(request.getId_Promoter());
@@ -230,6 +259,11 @@ public class RequestController {
                 .toList();
 
         for (FinancePromoter linkedLaunch : linkedLaunches) {
+            // Se esse Pix já tinha sido lançado no extrato (ver LancamentoExtratoController
+            // /pix-pendentes e /pix/{id}), desfaz também esse lançamento — senão fica um
+            // lançamento "fantasma" no extrato que não corresponde mais a nenhum Pix aprovado.
+            lancamentoExtratoRepository.findByOrigemTipoAndOrigemId("SOLICITACAO_PIX", linkedLaunch.getId())
+                    .forEach(lancamento -> lancamentoExtratoRepository.deleteById(lancamento.getId()));
             financePromoterRepository.deleteById(linkedLaunch.getId());
         }
 
@@ -395,6 +429,15 @@ public class RequestController {
         return user.getJobTittle() != null && user.getJobTittle().trim().equalsIgnoreCase("FINANCEIRO");
     }
 
+    private boolean isAdmin(User user) {
+        return user.getJobTittle() != null && user.getJobTittle().trim().equalsIgnoreCase("ADMIN");
+    }
+
+    private boolean allowedToRead(Authentication authentication) {
+        User user = currentUser(authentication);
+        return user != null && (isRh(user) || isFinance(user) || isAdmin(user));
+    }
+
     private String toInternalType(String value) {
         if (value == null || value.isBlank()) {
             return "";
@@ -418,6 +461,10 @@ public class RequestController {
 
     private ResponseEntity<?> badRequest(String message) {
         return ResponseEntity.badRequest().body(Map.of("message", message));
+    }
+
+    private ResponseEntity<?> forbidden() {
+        return ResponseEntity.status(403).body(Map.of("message", "Você não tem permissão para acessar solicitações."));
     }
 
     private String approvalDescription(Request request) {
