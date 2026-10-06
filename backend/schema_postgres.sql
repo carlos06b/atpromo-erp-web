@@ -297,7 +297,7 @@ ALTER TABLE work_item_delivery
 
 -- =========================================================
 -- Usuário admin inicial — SEM senha fixa commitada neste arquivo
--- (achado C1 da auditoria de 05/10/2026: a senha "Teste123!" estava em
+-- (achado C1 da auditoria de 05/10/2026: havia uma senha de teste em
 -- texto claro aqui, num repositório público, usada pra popular o banco
 -- de produção no Render).
 --
@@ -309,7 +309,7 @@ ALTER TABLE work_item_delivery
 --   3. Nunca commite esse INSERT com o hash real preenchido.
 --
 -- AÇÃO NECESSÁRIA SUA: se este script já rodou em produção com o admin de
--- teste antigo (admin@atpromo.com / Teste123!), troque a senha dessa conta
+-- teste antigo (admin@atpromo.com), troque a senha dessa conta
 -- agora mesmo — eu não tenho (e não devo ter) acesso ao banco de produção
 -- pra fazer isso por você.
 -- =========================================================
