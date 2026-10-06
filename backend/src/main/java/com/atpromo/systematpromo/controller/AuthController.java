@@ -119,11 +119,17 @@ public class AuthController {
         return ResponseEntity.ok(Map.of("message", FORGOT_PASSWORD_GENERIC_MESSAGE));
     }
 
+    // ACHADO H3: antes confiava sem validacao no header X-Forwarded-For,
+    // que e enviado pelo PROPRIO cliente - bastava variar esse header a
+    // cada chamada para nunca bater o limite de 5 solicitacoes/hora por IP
+    // em PasswordResetLimiter. Agora usamos so request.getRemoteAddr(), que
+    // e o IP da conexao TCP real (nao controlavel pelo cliente). Se esta
+    // aplicacao algum dia ficar atras de um proxy confiavel que precise
+    // reescrever o IP (ex. um load balancer que normalize X-Forwarded-For),
+    // isso deve voltar a usar o header, mas validando explicitamente que a
+    // requisicao veio desse proxy confiavel - nunca confiando no primeiro
+    // valor do header como estava antes.
     private String clientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
-        }
         return request.getRemoteAddr();
     }
 }
