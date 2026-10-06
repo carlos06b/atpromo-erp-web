@@ -41,27 +41,21 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
-ACHADO H2 (CORRIGIDO): o backend verificava papel com um "deny-list" de um
- * unico papel em 14 controllers (so bloqueava RH, ou so bloqueava
- * FINANCEIRO) e nunca verificava SUPERVISOR nem qualquer outro cargo. O
- * frontend (access.js / PAGE_ACCESS), ao contrario, ja escondia essas
- * mesmas paginas de SUPERVISOR - ou seja, um SUPERVISOR que chamasse a API
- * diretamente (Postman, DevTools) tinha acesso total a telas que nunca
- * aparecem para ele na interface.
- *
- * A correcao troca o deny-list de 1 papel por um allow-list explicito (o
- * papel de negocio dono da tela + ADMIN) em cada um dos 14 controllers,
- * alinhando o backend com o que o frontend ja decidia. Este arquivo cobre
- * o endpoint de leitura (GET) de 9 desses controllers (os que ja estavam
- * versionados no git antes desta sessao) com a mesma matriz de papeis: o
- * papel dono da tela e ADMIN continuam funcionando (200); o papel que antes
- * era bloqueado continua bloqueado (403); e agora SUPERVISOR e qualquer
- * cargo desconhecido tambem recebem 403. Os outros 5 controllers do mesmo
- * achado (modulo Extrato, ainda nao commitado por ser feature sua em
- * andamento) tem a mesma correcao e os mesmos testes em
- * H2AllowListAccessExtratoFeatureTest.java.
+ACHADO H2 (CORRIGIDO) - parte referente ao modulo Extrato: mesmo bug e
+ * mesma correcao descritos em H2AllowListAccessTest.java (deny-list de 1
+ * papel -> allow-list explicito incluindo ADMIN, agora bloqueando SUPERVISOR
+ * e cargo desconhecido tambem). Este arquivo cobre os 5 controllers do
+ * modulo Extrato (contas bancarias, empresas, beneficiarios, categorias de
+ * lancamento, centros de custo) mais o proprio LancamentoExtratoController -
+ * todos ainda SEM COMMIT porque fazem parte da sua feature "Extrato" em
+ * andamento, criada antes desta sessao. A correcao de permissao ja esta
+ * aplicada nesses arquivos e sera incluida automaticamente no commit que
+ * voce fizer da feature Extrato; nao commitei esses arquivos de producao
+ * junto com o resto do achado H2 para nao misturar o fix de seguranca com
+ * uma feature sua ainda nao finalizada (mesma decisao tomada para
+ * frontend/src/pages/Extrato.jsx no achado C6).
  */
-class H2AllowListAccessTest {
+class H2AllowListAccessExtratoFeatureTest {
 
     private static UserRepository userRepository;
 
@@ -86,30 +80,332 @@ class H2AllowListAccessTest {
     }
 
     @Nested
-    class Clientes {
+    class ContasBancarias {
 
+        private ContaBancariaRepository contaBancariaRepository;
+        private EmpresaRepository empresaRepository;
+        private LancamentoExtratoRepository lancamentoExtratoRepository;
+        private AccessControl accessControl;
+        private ContaBancariaController controller;
+
+        @BeforeEach
+        void setUp() {
+            contaBancariaRepository = mock(ContaBancariaRepository.class);
+            empresaRepository = mock(EmpresaRepository.class);
+            lancamentoExtratoRepository = mock(LancamentoExtratoRepository.class);
+            accessControl = new AccessControl(userRepository);
+            controller = new ContaBancariaController(contaBancariaRepository, empresaRepository, lancamentoExtratoRepository, accessControl);
+        }
+
+        @Test
+        void rh_bloqueado() {
+            Authentication auth = authFor(RH);
+            ResponseEntity<?> resposta = controller.listAll(auth);
+            assertEquals(403, resposta.getStatusCode().value());
+        }
+
+        @Test
+        void supervisor_bloqueado() {
+            Authentication auth = authFor(SUPERVISOR);
+            ResponseEntity<?> resposta = controller.listAll(auth);
+            assertEquals(403, resposta.getStatusCode().value(),
+                    "ACHADO H2: SUPERVISOR nao deveria acessar este recurso pela API, assim como nao acessa pelo frontend");
+        }
+
+        @Test
+        void cargoDesconhecido_bloqueado() {
+            Authentication auth = authFor(DESCONHECIDO);
+            ResponseEntity<?> resposta = controller.listAll(auth);
+            assertEquals(403, resposta.getStatusCode().value());
+        }
+
+        @Test
+        void financeiro_continuaFuncionando() {
+            when(contaBancariaRepository.findAll()).thenReturn(List.of());
+            Authentication auth = authFor(FINANCEIRO);
+            ResponseEntity<?> resposta = controller.listAll(auth);
+            assertEquals(200, resposta.getStatusCode().value());
+        }
+
+        @Test
+        void admin_continuaFuncionando() {
+            when(contaBancariaRepository.findAll()).thenReturn(List.of());
+            Authentication auth = authFor(ADMIN);
+            ResponseEntity<?> resposta = controller.listAll(auth);
+            assertEquals(200, resposta.getStatusCode().value());
+        }
+    }
+
+
+    @Nested
+    class Empresas {
+
+        private EmpresaRepository empresaRepository;
+        private ContaBancariaRepository contaBancariaRepository;
+        private AccessControl accessControl;
+        private EmpresaController controller;
+
+        @BeforeEach
+        void setUp() {
+            empresaRepository = mock(EmpresaRepository.class);
+            contaBancariaRepository = mock(ContaBancariaRepository.class);
+            accessControl = new AccessControl(userRepository);
+            controller = new EmpresaController(empresaRepository, contaBancariaRepository, accessControl);
+        }
+
+        @Test
+        void rh_bloqueado() {
+            Authentication auth = authFor(RH);
+            ResponseEntity<?> resposta = controller.listAll(auth);
+            assertEquals(403, resposta.getStatusCode().value());
+        }
+
+        @Test
+        void supervisor_bloqueado() {
+            Authentication auth = authFor(SUPERVISOR);
+            ResponseEntity<?> resposta = controller.listAll(auth);
+            assertEquals(403, resposta.getStatusCode().value(),
+                    "ACHADO H2: SUPERVISOR nao deveria acessar este recurso pela API, assim como nao acessa pelo frontend");
+        }
+
+        @Test
+        void cargoDesconhecido_bloqueado() {
+            Authentication auth = authFor(DESCONHECIDO);
+            ResponseEntity<?> resposta = controller.listAll(auth);
+            assertEquals(403, resposta.getStatusCode().value());
+        }
+
+        @Test
+        void financeiro_continuaFuncionando() {
+            when(empresaRepository.findAll()).thenReturn(List.of());
+            Authentication auth = authFor(FINANCEIRO);
+            ResponseEntity<?> resposta = controller.listAll(auth);
+            assertEquals(200, resposta.getStatusCode().value());
+        }
+
+        @Test
+        void admin_continuaFuncionando() {
+            when(empresaRepository.findAll()).thenReturn(List.of());
+            Authentication auth = authFor(ADMIN);
+            ResponseEntity<?> resposta = controller.listAll(auth);
+            assertEquals(200, resposta.getStatusCode().value());
+        }
+    }
+
+
+    @Nested
+    class Beneficiarios {
+
+        private BeneficiarioRepository beneficiarioRepository;
+        private LancamentoExtratoRepository lancamentoExtratoRepository;
+        private AccessControl accessControl;
+        private BeneficiarioController controller;
+
+        @BeforeEach
+        void setUp() {
+            beneficiarioRepository = mock(BeneficiarioRepository.class);
+            lancamentoExtratoRepository = mock(LancamentoExtratoRepository.class);
+            accessControl = new AccessControl(userRepository);
+            controller = new BeneficiarioController(beneficiarioRepository, lancamentoExtratoRepository, accessControl);
+        }
+
+        @Test
+        void rh_bloqueado() {
+            Authentication auth = authFor(RH);
+            ResponseEntity<?> resposta = controller.listAll(auth);
+            assertEquals(403, resposta.getStatusCode().value());
+        }
+
+        @Test
+        void supervisor_bloqueado() {
+            Authentication auth = authFor(SUPERVISOR);
+            ResponseEntity<?> resposta = controller.listAll(auth);
+            assertEquals(403, resposta.getStatusCode().value(),
+                    "ACHADO H2: SUPERVISOR nao deveria acessar este recurso pela API, assim como nao acessa pelo frontend");
+        }
+
+        @Test
+        void cargoDesconhecido_bloqueado() {
+            Authentication auth = authFor(DESCONHECIDO);
+            ResponseEntity<?> resposta = controller.listAll(auth);
+            assertEquals(403, resposta.getStatusCode().value());
+        }
+
+        @Test
+        void financeiro_continuaFuncionando() {
+            when(beneficiarioRepository.findAll()).thenReturn(List.of());
+            Authentication auth = authFor(FINANCEIRO);
+            ResponseEntity<?> resposta = controller.listAll(auth);
+            assertEquals(200, resposta.getStatusCode().value());
+        }
+
+        @Test
+        void admin_continuaFuncionando() {
+            when(beneficiarioRepository.findAll()).thenReturn(List.of());
+            Authentication auth = authFor(ADMIN);
+            ResponseEntity<?> resposta = controller.listAll(auth);
+            assertEquals(200, resposta.getStatusCode().value());
+        }
+    }
+
+
+    @Nested
+    class CategoriasLancamento {
+
+        private CategoriaLancamentoRepository categoriaLancamentoRepository;
+        private LancamentoExtratoRepository lancamentoExtratoRepository;
+        private AccessControl accessControl;
+        private CategoriaLancamentoController controller;
+
+        @BeforeEach
+        void setUp() {
+            categoriaLancamentoRepository = mock(CategoriaLancamentoRepository.class);
+            lancamentoExtratoRepository = mock(LancamentoExtratoRepository.class);
+            accessControl = new AccessControl(userRepository);
+            controller = new CategoriaLancamentoController(categoriaLancamentoRepository, lancamentoExtratoRepository, accessControl);
+        }
+
+        @Test
+        void rh_bloqueado() {
+            Authentication auth = authFor(RH);
+            ResponseEntity<?> resposta = controller.listAll(auth);
+            assertEquals(403, resposta.getStatusCode().value());
+        }
+
+        @Test
+        void supervisor_bloqueado() {
+            Authentication auth = authFor(SUPERVISOR);
+            ResponseEntity<?> resposta = controller.listAll(auth);
+            assertEquals(403, resposta.getStatusCode().value(),
+                    "ACHADO H2: SUPERVISOR nao deveria acessar este recurso pela API, assim como nao acessa pelo frontend");
+        }
+
+        @Test
+        void cargoDesconhecido_bloqueado() {
+            Authentication auth = authFor(DESCONHECIDO);
+            ResponseEntity<?> resposta = controller.listAll(auth);
+            assertEquals(403, resposta.getStatusCode().value());
+        }
+
+        @Test
+        void financeiro_continuaFuncionando() {
+            when(categoriaLancamentoRepository.findAll()).thenReturn(List.of());
+            Authentication auth = authFor(FINANCEIRO);
+            ResponseEntity<?> resposta = controller.listAll(auth);
+            assertEquals(200, resposta.getStatusCode().value());
+        }
+
+        @Test
+        void admin_continuaFuncionando() {
+            when(categoriaLancamentoRepository.findAll()).thenReturn(List.of());
+            Authentication auth = authFor(ADMIN);
+            ResponseEntity<?> resposta = controller.listAll(auth);
+            assertEquals(200, resposta.getStatusCode().value());
+        }
+    }
+
+
+    @Nested
+    class CentrosCusto {
+
+        private CentroCustoRepository centroCustoRepository;
+        private LancamentoExtratoRepository lancamentoExtratoRepository;
+        private AccessControl accessControl;
+        private CentroCustoController controller;
+
+        @BeforeEach
+        void setUp() {
+            centroCustoRepository = mock(CentroCustoRepository.class);
+            lancamentoExtratoRepository = mock(LancamentoExtratoRepository.class);
+            accessControl = new AccessControl(userRepository);
+            controller = new CentroCustoController(centroCustoRepository, lancamentoExtratoRepository, accessControl);
+        }
+
+        @Test
+        void rh_bloqueado() {
+            Authentication auth = authFor(RH);
+            ResponseEntity<?> resposta = controller.listAll(auth);
+            assertEquals(403, resposta.getStatusCode().value());
+        }
+
+        @Test
+        void supervisor_bloqueado() {
+            Authentication auth = authFor(SUPERVISOR);
+            ResponseEntity<?> resposta = controller.listAll(auth);
+            assertEquals(403, resposta.getStatusCode().value(),
+                    "ACHADO H2: SUPERVISOR nao deveria acessar este recurso pela API, assim como nao acessa pelo frontend");
+        }
+
+        @Test
+        void cargoDesconhecido_bloqueado() {
+            Authentication auth = authFor(DESCONHECIDO);
+            ResponseEntity<?> resposta = controller.listAll(auth);
+            assertEquals(403, resposta.getStatusCode().value());
+        }
+
+        @Test
+        void financeiro_continuaFuncionando() {
+            when(centroCustoRepository.findAll()).thenReturn(List.of());
+            Authentication auth = authFor(FINANCEIRO);
+            ResponseEntity<?> resposta = controller.listAll(auth);
+            assertEquals(200, resposta.getStatusCode().value());
+        }
+
+        @Test
+        void admin_continuaFuncionando() {
+            when(centroCustoRepository.findAll()).thenReturn(List.of());
+            Authentication auth = authFor(ADMIN);
+            ResponseEntity<?> resposta = controller.listAll(auth);
+            assertEquals(200, resposta.getStatusCode().value());
+        }
+    }
+
+
+    @Nested
+    class ExtratoLancamentos {
+
+        private LancamentoExtratoRepository lancamentoExtratoRepository;
+        private ContaBancariaRepository contaBancariaRepository;
+        private BeneficiarioRepository beneficiarioRepository;
+        private CategoriaLancamentoRepository categoriaLancamentoRepository;
+        private CentroCustoRepository centroCustoRepository;
+        private FinancePromoterRepository financePromoterRepository;
+        private PromoterRepository promoterRepository;
+        private FixedExpenseHistoryRepository fixedExpenseHistoryRepository;
+        private VariableExpenseRepository variableExpenseRepository;
+        private InvoiceRepository invoiceRepository;
         private ClientRepository clientRepository;
         private AccessControl accessControl;
-        private ClientController controller;
+        private LancamentoExtratoController controller;
 
         @BeforeEach
         void setUp() {
+            lancamentoExtratoRepository = mock(LancamentoExtratoRepository.class);
+            contaBancariaRepository = mock(ContaBancariaRepository.class);
+            beneficiarioRepository = mock(BeneficiarioRepository.class);
+            categoriaLancamentoRepository = mock(CategoriaLancamentoRepository.class);
+            centroCustoRepository = mock(CentroCustoRepository.class);
+            financePromoterRepository = mock(FinancePromoterRepository.class);
+            promoterRepository = mock(PromoterRepository.class);
+            fixedExpenseHistoryRepository = mock(FixedExpenseHistoryRepository.class);
+            variableExpenseRepository = mock(VariableExpenseRepository.class);
+            invoiceRepository = mock(InvoiceRepository.class);
             clientRepository = mock(ClientRepository.class);
             accessControl = new AccessControl(userRepository);
-            controller = new ClientController(clientRepository, accessControl);
+            controller = new LancamentoExtratoController(lancamentoExtratoRepository, contaBancariaRepository, beneficiarioRepository, categoriaLancamentoRepository, centroCustoRepository, financePromoterRepository, promoterRepository, fixedExpenseHistoryRepository, variableExpenseRepository, invoiceRepository, clientRepository, accessControl);
         }
 
         @Test
         void rh_bloqueado() {
             Authentication auth = authFor(RH);
-            ResponseEntity<?> resposta = controller.listAll(auth);
+            ResponseEntity<?> resposta = controller.listByConta(1, auth);
             assertEquals(403, resposta.getStatusCode().value());
         }
 
         @Test
         void supervisor_bloqueado() {
             Authentication auth = authFor(SUPERVISOR);
-            ResponseEntity<?> resposta = controller.listAll(auth);
+            ResponseEntity<?> resposta = controller.listByConta(1, auth);
             assertEquals(403, resposta.getStatusCode().value(),
                     "ACHADO H2: SUPERVISOR nao deveria acessar este recurso pela API, assim como nao acessa pelo frontend");
         }
@@ -117,469 +413,29 @@ class H2AllowListAccessTest {
         @Test
         void cargoDesconhecido_bloqueado() {
             Authentication auth = authFor(DESCONHECIDO);
-            ResponseEntity<?> resposta = controller.listAll(auth);
+            ResponseEntity<?> resposta = controller.listByConta(1, auth);
             assertEquals(403, resposta.getStatusCode().value());
         }
 
         @Test
         void financeiro_continuaFuncionando() {
-            when(clientRepository.findAll()).thenReturn(List.of());
+            ContaBancaria contaMock = mock(ContaBancaria.class);
+            when(contaMock.getSaldoInicial()).thenReturn(BigDecimal.ZERO);
+            when(contaBancariaRepository.findById(1)).thenReturn(Optional.of(contaMock));
+            when(lancamentoExtratoRepository.findByContaBancariaId(1)).thenReturn(new ArrayList<>());
             Authentication auth = authFor(FINANCEIRO);
-            ResponseEntity<?> resposta = controller.listAll(auth);
+            ResponseEntity<?> resposta = controller.listByConta(1, auth);
             assertEquals(200, resposta.getStatusCode().value());
         }
 
         @Test
         void admin_continuaFuncionando() {
-            when(clientRepository.findAll()).thenReturn(List.of());
+            ContaBancaria contaMock = mock(ContaBancaria.class);
+            when(contaMock.getSaldoInicial()).thenReturn(BigDecimal.ZERO);
+            when(contaBancariaRepository.findById(1)).thenReturn(Optional.of(contaMock));
+            when(lancamentoExtratoRepository.findByContaBancariaId(1)).thenReturn(new ArrayList<>());
             Authentication auth = authFor(ADMIN);
-            ResponseEntity<?> resposta = controller.listAll(auth);
-            assertEquals(200, resposta.getStatusCode().value());
-        }
-    }
-
-
-    @Nested
-    class Faturamento {
-
-        private InvoiceRepository invoiceRepository;
-        private AccessControl accessControl;
-        private InvoiceController controller;
-
-        @BeforeEach
-        void setUp() {
-            invoiceRepository = mock(InvoiceRepository.class);
-            accessControl = new AccessControl(userRepository);
-            controller = new InvoiceController(invoiceRepository, accessControl);
-        }
-
-        @Test
-        void rh_bloqueado() {
-            Authentication auth = authFor(RH);
-            ResponseEntity<?> resposta = controller.listAll(auth);
-            assertEquals(403, resposta.getStatusCode().value());
-        }
-
-        @Test
-        void supervisor_bloqueado() {
-            Authentication auth = authFor(SUPERVISOR);
-            ResponseEntity<?> resposta = controller.listAll(auth);
-            assertEquals(403, resposta.getStatusCode().value(),
-                    "ACHADO H2: SUPERVISOR nao deveria acessar este recurso pela API, assim como nao acessa pelo frontend");
-        }
-
-        @Test
-        void cargoDesconhecido_bloqueado() {
-            Authentication auth = authFor(DESCONHECIDO);
-            ResponseEntity<?> resposta = controller.listAll(auth);
-            assertEquals(403, resposta.getStatusCode().value());
-        }
-
-        @Test
-        void financeiro_continuaFuncionando() {
-            when(invoiceRepository.findAll()).thenReturn(List.of());
-            Authentication auth = authFor(FINANCEIRO);
-            ResponseEntity<?> resposta = controller.listAll(auth);
-            assertEquals(200, resposta.getStatusCode().value());
-        }
-
-        @Test
-        void admin_continuaFuncionando() {
-            when(invoiceRepository.findAll()).thenReturn(List.of());
-            Authentication auth = authFor(ADMIN);
-            ResponseEntity<?> resposta = controller.listAll(auth);
-            assertEquals(200, resposta.getStatusCode().value());
-        }
-    }
-
-
-    @Nested
-    class DespesasFixas {
-
-        private FixedExpenseRepository fixedExpenseRepository;
-        private FixedExpenseHistoryRepository fixedExpenseHistoryRepository;
-        private AccessControl accessControl;
-        private FixedExpenseController controller;
-
-        @BeforeEach
-        void setUp() {
-            fixedExpenseRepository = mock(FixedExpenseRepository.class);
-            fixedExpenseHistoryRepository = mock(FixedExpenseHistoryRepository.class);
-            accessControl = new AccessControl(userRepository);
-            controller = new FixedExpenseController(fixedExpenseRepository, fixedExpenseHistoryRepository, accessControl);
-        }
-
-        @Test
-        void rh_bloqueado() {
-            Authentication auth = authFor(RH);
-            ResponseEntity<?> resposta = controller.listAll(auth);
-            assertEquals(403, resposta.getStatusCode().value());
-        }
-
-        @Test
-        void supervisor_bloqueado() {
-            Authentication auth = authFor(SUPERVISOR);
-            ResponseEntity<?> resposta = controller.listAll(auth);
-            assertEquals(403, resposta.getStatusCode().value(),
-                    "ACHADO H2: SUPERVISOR nao deveria acessar este recurso pela API, assim como nao acessa pelo frontend");
-        }
-
-        @Test
-        void cargoDesconhecido_bloqueado() {
-            Authentication auth = authFor(DESCONHECIDO);
-            ResponseEntity<?> resposta = controller.listAll(auth);
-            assertEquals(403, resposta.getStatusCode().value());
-        }
-
-        @Test
-        void financeiro_continuaFuncionando() {
-            when(fixedExpenseRepository.findAll()).thenReturn(List.of());
-            Authentication auth = authFor(FINANCEIRO);
-            ResponseEntity<?> resposta = controller.listAll(auth);
-            assertEquals(200, resposta.getStatusCode().value());
-        }
-
-        @Test
-        void admin_continuaFuncionando() {
-            when(fixedExpenseRepository.findAll()).thenReturn(List.of());
-            Authentication auth = authFor(ADMIN);
-            ResponseEntity<?> resposta = controller.listAll(auth);
-            assertEquals(200, resposta.getStatusCode().value());
-        }
-    }
-
-
-    @Nested
-    class DespesasFixasHistorico {
-
-        private FixedExpenseHistoryRepository fixedExpenseHistoryRepository;
-        private AccessControl accessControl;
-        private FixedExpenseHistoryController controller;
-
-        @BeforeEach
-        void setUp() {
-            fixedExpenseHistoryRepository = mock(FixedExpenseHistoryRepository.class);
-            accessControl = new AccessControl(userRepository);
-            controller = new FixedExpenseHistoryController(fixedExpenseHistoryRepository, accessControl);
-        }
-
-        @Test
-        void rh_bloqueado() {
-            Authentication auth = authFor(RH);
-            ResponseEntity<?> resposta = controller.listAll(auth);
-            assertEquals(403, resposta.getStatusCode().value());
-        }
-
-        @Test
-        void supervisor_bloqueado() {
-            Authentication auth = authFor(SUPERVISOR);
-            ResponseEntity<?> resposta = controller.listAll(auth);
-            assertEquals(403, resposta.getStatusCode().value(),
-                    "ACHADO H2: SUPERVISOR nao deveria acessar este recurso pela API, assim como nao acessa pelo frontend");
-        }
-
-        @Test
-        void cargoDesconhecido_bloqueado() {
-            Authentication auth = authFor(DESCONHECIDO);
-            ResponseEntity<?> resposta = controller.listAll(auth);
-            assertEquals(403, resposta.getStatusCode().value());
-        }
-
-        @Test
-        void financeiro_continuaFuncionando() {
-            when(fixedExpenseHistoryRepository.findAll()).thenReturn(List.of());
-            Authentication auth = authFor(FINANCEIRO);
-            ResponseEntity<?> resposta = controller.listAll(auth);
-            assertEquals(200, resposta.getStatusCode().value());
-        }
-
-        @Test
-        void admin_continuaFuncionando() {
-            when(fixedExpenseHistoryRepository.findAll()).thenReturn(List.of());
-            Authentication auth = authFor(ADMIN);
-            ResponseEntity<?> resposta = controller.listAll(auth);
-            assertEquals(200, resposta.getStatusCode().value());
-        }
-    }
-
-
-    @Nested
-    class DespesasVariaveis {
-
-        private VariableExpenseRepository variableExpenseRepository;
-        private AccessControl accessControl;
-        private VariableExpenseController controller;
-
-        @BeforeEach
-        void setUp() {
-            variableExpenseRepository = mock(VariableExpenseRepository.class);
-            accessControl = new AccessControl(userRepository);
-            controller = new VariableExpenseController(variableExpenseRepository, accessControl);
-        }
-
-        @Test
-        void rh_bloqueado() {
-            Authentication auth = authFor(RH);
-            ResponseEntity<?> resposta = controller.listAll(auth);
-            assertEquals(403, resposta.getStatusCode().value());
-        }
-
-        @Test
-        void supervisor_bloqueado() {
-            Authentication auth = authFor(SUPERVISOR);
-            ResponseEntity<?> resposta = controller.listAll(auth);
-            assertEquals(403, resposta.getStatusCode().value(),
-                    "ACHADO H2: SUPERVISOR nao deveria acessar este recurso pela API, assim como nao acessa pelo frontend");
-        }
-
-        @Test
-        void cargoDesconhecido_bloqueado() {
-            Authentication auth = authFor(DESCONHECIDO);
-            ResponseEntity<?> resposta = controller.listAll(auth);
-            assertEquals(403, resposta.getStatusCode().value());
-        }
-
-        @Test
-        void financeiro_continuaFuncionando() {
-            when(variableExpenseRepository.findAll()).thenReturn(List.of());
-            Authentication auth = authFor(FINANCEIRO);
-            ResponseEntity<?> resposta = controller.listAll(auth);
-            assertEquals(200, resposta.getStatusCode().value());
-        }
-
-        @Test
-        void admin_continuaFuncionando() {
-            when(variableExpenseRepository.findAll()).thenReturn(List.of());
-            Authentication auth = authFor(ADMIN);
-            ResponseEntity<?> resposta = controller.listAll(auth);
-            assertEquals(200, resposta.getStatusCode().value());
-        }
-    }
-
-
-    @Nested
-    class IndicadoresRH {
-
-        private PromoterRepository promoterRepository;
-        private LojaRepository lojaRepository;
-        private AccessControl accessControl;
-        private HrIndicatorsController controller;
-
-        @BeforeEach
-        void setUp() {
-            promoterRepository = mock(PromoterRepository.class);
-            lojaRepository = mock(LojaRepository.class);
-            accessControl = new AccessControl(userRepository);
-            controller = new HrIndicatorsController(promoterRepository, lojaRepository, accessControl);
-        }
-
-        @Test
-        void financeiro_bloqueado() {
-            Authentication auth = authFor(FINANCEIRO);
-            ResponseEntity<?> resposta = controller.getIndicators(LocalDate.now(), LocalDate.now(), null, auth);
-            assertEquals(403, resposta.getStatusCode().value());
-        }
-
-        @Test
-        void supervisor_bloqueado() {
-            Authentication auth = authFor(SUPERVISOR);
-            ResponseEntity<?> resposta = controller.getIndicators(LocalDate.now(), LocalDate.now(), null, auth);
-            assertEquals(403, resposta.getStatusCode().value(),
-                    "ACHADO H2: SUPERVISOR nao deveria acessar este recurso pela API, assim como nao acessa pelo frontend");
-        }
-
-        @Test
-        void cargoDesconhecido_bloqueado() {
-            Authentication auth = authFor(DESCONHECIDO);
-            ResponseEntity<?> resposta = controller.getIndicators(LocalDate.now(), LocalDate.now(), null, auth);
-            assertEquals(403, resposta.getStatusCode().value());
-        }
-
-        @Test
-        void rh_continuaFuncionando() {
-            when(promoterRepository.findAll()).thenReturn(List.of());
-            when(lojaRepository.findAll()).thenReturn(List.of());
-            Authentication auth = authFor(RH);
-            ResponseEntity<?> resposta = controller.getIndicators(LocalDate.now(), LocalDate.now(), null, auth);
-            assertEquals(200, resposta.getStatusCode().value());
-        }
-
-        @Test
-        void admin_continuaFuncionando() {
-            when(promoterRepository.findAll()).thenReturn(List.of());
-            when(lojaRepository.findAll()).thenReturn(List.of());
-            Authentication auth = authFor(ADMIN);
-            ResponseEntity<?> resposta = controller.getIndicators(LocalDate.now(), LocalDate.now(), null, auth);
-            assertEquals(200, resposta.getStatusCode().value());
-        }
-    }
-
-
-    @Nested
-    class EstoqueItens {
-
-        private InventoryItemRepository inventoryItemRepository;
-        private AccessControl accessControl;
-        private InventoryItemController controller;
-
-        @BeforeEach
-        void setUp() {
-            inventoryItemRepository = mock(InventoryItemRepository.class);
-            accessControl = new AccessControl(userRepository);
-            controller = new InventoryItemController(inventoryItemRepository, accessControl);
-        }
-
-        @Test
-        void financeiro_bloqueado() {
-            Authentication auth = authFor(FINANCEIRO);
-            ResponseEntity<?> resposta = controller.list(auth);
-            assertEquals(403, resposta.getStatusCode().value());
-        }
-
-        @Test
-        void supervisor_bloqueado() {
-            Authentication auth = authFor(SUPERVISOR);
-            ResponseEntity<?> resposta = controller.list(auth);
-            assertEquals(403, resposta.getStatusCode().value(),
-                    "ACHADO H2: SUPERVISOR nao deveria acessar este recurso pela API, assim como nao acessa pelo frontend");
-        }
-
-        @Test
-        void cargoDesconhecido_bloqueado() {
-            Authentication auth = authFor(DESCONHECIDO);
-            ResponseEntity<?> resposta = controller.list(auth);
-            assertEquals(403, resposta.getStatusCode().value());
-        }
-
-        @Test
-        void rh_continuaFuncionando() {
-            when(inventoryItemRepository.findAll()).thenReturn(List.of());
-            Authentication auth = authFor(RH);
-            ResponseEntity<?> resposta = controller.list(auth);
-            assertEquals(200, resposta.getStatusCode().value());
-        }
-
-        @Test
-        void admin_continuaFuncionando() {
-            when(inventoryItemRepository.findAll()).thenReturn(List.of());
-            Authentication auth = authFor(ADMIN);
-            ResponseEntity<?> resposta = controller.list(auth);
-            assertEquals(200, resposta.getStatusCode().value());
-        }
-    }
-
-
-    @Nested
-    class EstoqueMovimentos {
-
-        private StockMovementRepository stockMovementRepository;
-        private InventoryItemRepository inventoryItemRepository;
-        private PromoterRepository promoterRepository;
-        private AccessControl accessControl;
-        private StockMovementController controller;
-
-        @BeforeEach
-        void setUp() {
-            stockMovementRepository = mock(StockMovementRepository.class);
-            inventoryItemRepository = mock(InventoryItemRepository.class);
-            promoterRepository = mock(PromoterRepository.class);
-            accessControl = new AccessControl(userRepository);
-            controller = new StockMovementController(stockMovementRepository, inventoryItemRepository, promoterRepository, accessControl);
-        }
-
-        @Test
-        void financeiro_bloqueado() {
-            Authentication auth = authFor(FINANCEIRO);
-            ResponseEntity<?> resposta = controller.list(auth);
-            assertEquals(403, resposta.getStatusCode().value());
-        }
-
-        @Test
-        void supervisor_bloqueado() {
-            Authentication auth = authFor(SUPERVISOR);
-            ResponseEntity<?> resposta = controller.list(auth);
-            assertEquals(403, resposta.getStatusCode().value(),
-                    "ACHADO H2: SUPERVISOR nao deveria acessar este recurso pela API, assim como nao acessa pelo frontend");
-        }
-
-        @Test
-        void cargoDesconhecido_bloqueado() {
-            Authentication auth = authFor(DESCONHECIDO);
-            ResponseEntity<?> resposta = controller.list(auth);
-            assertEquals(403, resposta.getStatusCode().value());
-        }
-
-        @Test
-        void rh_continuaFuncionando() {
-            when(stockMovementRepository.findAll()).thenReturn(List.of());
-            Authentication auth = authFor(RH);
-            ResponseEntity<?> resposta = controller.list(auth);
-            assertEquals(200, resposta.getStatusCode().value());
-        }
-
-        @Test
-        void admin_continuaFuncionando() {
-            when(stockMovementRepository.findAll()).thenReturn(List.of());
-            Authentication auth = authFor(ADMIN);
-            ResponseEntity<?> resposta = controller.list(auth);
-            assertEquals(200, resposta.getStatusCode().value());
-        }
-    }
-
-
-    @Nested
-    class Uniformes {
-
-        private WorkItemDeliveryRepository workItemDeliveryRepository;
-        private InventoryItemRepository inventoryItemRepository;
-        private PromoterRepository promoterRepository;
-        private AccessControl accessControl;
-        private WorkItemDeliveryController controller;
-
-        @BeforeEach
-        void setUp() {
-            workItemDeliveryRepository = mock(WorkItemDeliveryRepository.class);
-            inventoryItemRepository = mock(InventoryItemRepository.class);
-            promoterRepository = mock(PromoterRepository.class);
-            accessControl = new AccessControl(userRepository);
-            controller = new WorkItemDeliveryController(workItemDeliveryRepository, inventoryItemRepository, promoterRepository, accessControl);
-        }
-
-        @Test
-        void financeiro_bloqueado() {
-            Authentication auth = authFor(FINANCEIRO);
-            ResponseEntity<?> resposta = controller.list(auth);
-            assertEquals(403, resposta.getStatusCode().value());
-        }
-
-        @Test
-        void supervisor_bloqueado() {
-            Authentication auth = authFor(SUPERVISOR);
-            ResponseEntity<?> resposta = controller.list(auth);
-            assertEquals(403, resposta.getStatusCode().value(),
-                    "ACHADO H2: SUPERVISOR nao deveria acessar este recurso pela API, assim como nao acessa pelo frontend");
-        }
-
-        @Test
-        void cargoDesconhecido_bloqueado() {
-            Authentication auth = authFor(DESCONHECIDO);
-            ResponseEntity<?> resposta = controller.list(auth);
-            assertEquals(403, resposta.getStatusCode().value());
-        }
-
-        @Test
-        void rh_continuaFuncionando() {
-            when(workItemDeliveryRepository.findAll()).thenReturn(List.of());
-            Authentication auth = authFor(RH);
-            ResponseEntity<?> resposta = controller.list(auth);
-            assertEquals(200, resposta.getStatusCode().value());
-        }
-
-        @Test
-        void admin_continuaFuncionando() {
-            when(workItemDeliveryRepository.findAll()).thenReturn(List.of());
-            Authentication auth = authFor(ADMIN);
-            ResponseEntity<?> resposta = controller.list(auth);
+            ResponseEntity<?> resposta = controller.listByConta(1, auth);
             assertEquals(200, resposta.getStatusCode().value());
         }
     }
