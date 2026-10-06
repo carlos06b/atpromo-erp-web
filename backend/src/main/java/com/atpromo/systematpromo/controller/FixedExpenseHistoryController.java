@@ -23,7 +23,11 @@ public class FixedExpenseHistoryController {
 
     @GetMapping
     public ResponseEntity<?> listAll(Authentication authentication) {
-        if (accessControl.isRh(authentication)) {
+        // ACHADO H2: antes era um deny-list de 1 papel (so bloqueava RH),
+        // deixando SUPERVISOR (e qualquer cargo desconhecido) passar sem
+        // checagem nenhuma. Agora e um allow-list explicito, igual ao que
+        // o frontend (access.js / PAGE_ACCESS) ja decide para esta tela.
+        if (!(accessControl.isFinance(authentication) || accessControl.isAdmin(authentication))) {
             return forbidden();
         }
         return ResponseEntity.ok(fixedExpenseHistoryRepository.findAll());
@@ -31,7 +35,11 @@ public class FixedExpenseHistoryController {
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getById(@PathVariable int id, Authentication authentication) {
-        if (accessControl.isRh(authentication)) {
+        // ACHADO H2: antes era um deny-list de 1 papel (so bloqueava RH),
+        // deixando SUPERVISOR (e qualquer cargo desconhecido) passar sem
+        // checagem nenhuma. Agora e um allow-list explicito, igual ao que
+        // o frontend (access.js / PAGE_ACCESS) ja decide para esta tela.
+        if (!(accessControl.isFinance(authentication) || accessControl.isAdmin(authentication))) {
             return forbidden();
         }
         return fixedExpenseHistoryRepository.findById(id)
@@ -41,7 +49,11 @@ public class FixedExpenseHistoryController {
 
     @PostMapping
     public ResponseEntity<?> create(@RequestBody FixedExpenseHistory fixedExpenseHistory, Authentication authentication) {
-        if (accessControl.isRh(authentication)) {
+        // ACHADO H2: antes era um deny-list de 1 papel (so bloqueava RH),
+        // deixando SUPERVISOR (e qualquer cargo desconhecido) passar sem
+        // checagem nenhuma. Agora e um allow-list explicito, igual ao que
+        // o frontend (access.js / PAGE_ACCESS) ja decide para esta tela.
+        if (!(accessControl.isFinance(authentication) || accessControl.isAdmin(authentication))) {
             return forbidden();
         }
         fixedExpenseHistory.setId(null);
@@ -50,7 +62,11 @@ public class FixedExpenseHistoryController {
 
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@PathVariable int id, @RequestBody FixedExpenseHistory fixedExpenseHistory, Authentication authentication) {
-        if (accessControl.isRh(authentication)) {
+        // ACHADO H2: antes era um deny-list de 1 papel (so bloqueava RH),
+        // deixando SUPERVISOR (e qualquer cargo desconhecido) passar sem
+        // checagem nenhuma. Agora e um allow-list explicito, igual ao que
+        // o frontend (access.js / PAGE_ACCESS) ja decide para esta tela.
+        if (!(accessControl.isFinance(authentication) || accessControl.isAdmin(authentication))) {
             return forbidden();
         }
         if (!fixedExpenseHistoryRepository.existsById(id)) {
@@ -62,7 +78,11 @@ public class FixedExpenseHistoryController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> delete(@PathVariable int id, Authentication authentication) {
-        if (accessControl.isRh(authentication)) {
+        // ACHADO H2: antes era um deny-list de 1 papel (so bloqueava RH),
+        // deixando SUPERVISOR (e qualquer cargo desconhecido) passar sem
+        // checagem nenhuma. Agora e um allow-list explicito, igual ao que
+        // o frontend (access.js / PAGE_ACCESS) ja decide para esta tela.
+        if (!(accessControl.isFinance(authentication) || accessControl.isAdmin(authentication))) {
             return forbidden();
         }
         if (!fixedExpenseHistoryRepository.existsById(id)) {

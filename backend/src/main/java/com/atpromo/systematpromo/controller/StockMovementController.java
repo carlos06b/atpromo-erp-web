@@ -40,7 +40,12 @@ public class StockMovementController {
 
     @GetMapping
     public ResponseEntity<?> list(Authentication authentication) {
-        if (accessControl.isFinance(authentication)) {
+        // ACHADO H2: antes era um deny-list de 1 papel (so bloqueava
+        // FINANCEIRO), deixando SUPERVISOR (e qualquer cargo desconhecido)
+        // passar sem checagem nenhuma. Agora e um allow-list explicito,
+        // igual ao que o frontend (access.js / PAGE_ACCESS) ja decide para
+        // esta tela.
+        if (!(accessControl.isRh(authentication) || accessControl.isAdmin(authentication))) {
             return forbidden();
         }
 
@@ -54,7 +59,12 @@ public class StockMovementController {
     @PostMapping
     @Transactional
     public ResponseEntity<?> create(@RequestBody StockMovement movement, Authentication authentication) {
-        if (accessControl.isFinance(authentication)) {
+        // ACHADO H2: antes era um deny-list de 1 papel (so bloqueava
+        // FINANCEIRO), deixando SUPERVISOR (e qualquer cargo desconhecido)
+        // passar sem checagem nenhuma. Agora e um allow-list explicito,
+        // igual ao que o frontend (access.js / PAGE_ACCESS) ja decide para
+        // esta tela.
+        if (!(accessControl.isRh(authentication) || accessControl.isAdmin(authentication))) {
             return forbidden();
         }
 
@@ -92,7 +102,12 @@ public class StockMovementController {
     @DeleteMapping("/{id}")
     @Transactional
     public ResponseEntity<?> delete(@PathVariable Integer id, Authentication authentication) {
-        if (accessControl.isFinance(authentication)) {
+        // ACHADO H2: antes era um deny-list de 1 papel (so bloqueava
+        // FINANCEIRO), deixando SUPERVISOR (e qualquer cargo desconhecido)
+        // passar sem checagem nenhuma. Agora e um allow-list explicito,
+        // igual ao que o frontend (access.js / PAGE_ACCESS) ja decide para
+        // esta tela.
+        if (!(accessControl.isRh(authentication) || accessControl.isAdmin(authentication))) {
             return forbidden();
         }
 
