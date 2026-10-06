@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { apiFetch } from "../api";
+import { apiFetch, API_BASE_URL } from "../api";
 import { useAuth } from "../context/AuthContext";
 import Layout from "../components/Layout";
 import ConfirmDeleteDialog from "../components/ConfirmDeleteDialog";
@@ -460,6 +460,7 @@ export default function Extrato() {
   const [filterBeneficiarioId, setFilterBeneficiarioId] = useState("");
   const [filterCategoriaId, setFilterCategoriaId] = useState("");
   const [filterCentroCustoId, setFilterCentroCustoId] = useState("");
+  const [exportingExtrato, setExportingExtrato] = useState(false);
 
   const [isLancamentoModalOpen, setIsLancamentoModalOpen] = useState(false);
   const [lancamentoForm, setLancamentoForm] = useState(EMPTY_LANCAMENTO_FORM);
@@ -599,6 +600,59 @@ export default function Extrato() {
       setError(err.message || "Não foi possível carregar o extrato dessa conta.");
     } finally {
       setLoadingLancamentos(false);
+    }
+  }
+
+  // Exporta o extrato da conta selecionada em Excel. Respeita o filtro de
+  // período (De/Até) já usado na tela, mas não os outros filtros (tipo,
+  // beneficiário, categoria, centro de custo) - a planilha sempre traz tudo
+  // dentro do período, pra não ficar uma exportação "incompleta" sem avisar.
+  async function exportExtrato() {
+    if (!selectedContaId) {
+      return;
+    }
+
+    setError("");
+    setExportingExtrato(true);
+
+    try {
+      const params = new URLSearchParams({ contaBancariaId: selectedContaId });
+      if (filterDateStart) {
+        params.set("dataInicio", filterDateStart);
+      }
+      if (filterDateEnd) {
+        params.set("dataFim", filterDateEnd);
+      }
+
+      const response = await fetch(`${API_BASE_URL}/lancamentos-extrato/export?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!response.ok) {
+        let message = `Erro ${response.status}`;
+        try {
+          const data = await response.json();
+          message = data.message || message;
+        } catch {
+          // resposta sem corpo JSON - mantém a mensagem genérica acima
+        }
+        throw new Error(message);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      const apelido = contaSelecionada?.apelido ? contaSelecionada.apelido.replace(/[^a-zA-Z0-9-]+/g, "_") : "conta";
+      link.download = `extrato_${apelido}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err.message || "Não foi possível exportar o extrato.");
+    } finally {
+      setExportingExtrato(false);
     }
   }
 
@@ -1940,6 +1994,19 @@ export default function Extrato() {
                     className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-orange-600 disabled:opacity-50"
                   >
                     Nova transferência
+                  </button>
+                  <button
+                    type="button"
+                    onClick={exportExtrato}
+                    disabled={exportingExtrato}
+                    className="ml-auto rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100 disabled:opacity-50"
+                    title={
+                      filterDateStart || filterDateEnd
+                        ? "Exporta o extrato respeitando o período De/Até selecionado"
+                        : "Exporta o extrato completo desta conta"
+                    }
+                  >
+                    {exportingExtrato ? "Exportando..." : "Exportar Excel"}
                   </button>
                 </div>
 

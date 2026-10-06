@@ -23,6 +23,10 @@ import com.atpromo.systematpromo.repository.LancamentoExtratoRepository;
 import com.atpromo.systematpromo.repository.PromoterRepository;
 import com.atpromo.systematpromo.repository.VariableExpenseRepository;
 import com.atpromo.systematpromo.security.AccessControl;
+import com.atpromo.systematpromo.util.ExtratoExcelGenerator;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -186,6 +190,68 @@ public class LancamentoExtratoController {
 
         Collections.reverse(views);
         return ResponseEntity.ok(views);
+    }
+
+    @GetMapping("/export")
+    public ResponseEntity<?> export(
+            @RequestParam Integer contaBancariaId,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataInicio,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dataFim,
+            Authentication authentication) {
+        // ACHADO H2 (mesmo padrao dos outros endpoints deste controller):
+        // allow-list explicito de Financeiro/Admin.
+        if (!(accessControl.isFinance(authentication) || accessControl.isAdmin(authentication))) {
+            return forbidden();
+        }
+
+        ContaBancaria conta = contaBancariaRepository.findById(contaBancariaId).orElse(null);
+        if (conta == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        if (dataInicio != null && dataFim != null && dataInicio.isAfter(dataFim)) {
+            return badRequest("A data inicial nao pode ser maior que a data final.");
+        }
+
+        // O saldo acumulado precisa ser calculado sobre o historico completo
+        // da conta (igual ao listByConta) antes de aplicar o filtro de
+        // periodo - senao o "Saldo acumulado" exportado ficaria errado
+        // (recomecando do zero dentro do intervalo escolhido, em vez de
+        // refletir o saldo real da conta naquele ponto).
+        List<LancamentoExtrato> lancamentos = lancamentoExtratoRepository.findByContaBancariaId(contaBancariaId);
+        lancamentos.sort(Comparator.comparing(LancamentoExtrato::getData).thenComparing(LancamentoExtrato::getId));
+
+        BigDecimal saldo = conta.getSaldoInicial() != null ? conta.getSaldoInicial() : BigDecimal.ZERO;
+        List<ExtratoExcelGenerator.ExtratoLinha> linhas = new ArrayList<>();
+        for (LancamentoExtrato l : lancamentos) {
+            saldo = "ENTRADA".equalsIgnoreCase(l.getTipo()) ? saldo.add(l.getValor()) : saldo.subtract(l.getValor());
+
+            boolean dentroDoInicio = dataInicio == null || !l.getData().isBefore(dataInicio);
+            boolean dentroDoFim = dataFim == null || !l.getData().isAfter(dataFim);
+            if (!dentroDoInicio || !dentroDoFim) {
+                continue;
+            }
+
+            LancamentoView view = mapOne(l, saldo);
+            linhas.add(new ExtratoExcelGenerator.ExtratoLinha(
+                    view.data(),
+                    view.tipo(),
+                    view.descricao(),
+                    view.categoriaNome(),
+                    view.centroCustoNome(),
+                    view.beneficiarioNome(),
+                    view.valor(),
+                    view.saldoAcumulado()
+            ));
+        }
+
+        byte[] file = ExtratoExcelGenerator.generate(conta.getApelido(), linhas);
+        String filename = "extrato_" + sanitizeFilename(conta.getApelido()) + ".xlsx";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + filename)
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(file);
     }
 
     @PostMapping
@@ -859,6 +925,13 @@ public class LancamentoExtratoController {
 
     private String blankToNull(String value) {
         return (value == null || value.isBlank()) ? null : value.trim();
+    }
+
+    private String sanitizeFilename(String value) {
+        if (value == null || value.isBlank()) {
+            return "conta";
+        }
+        return value.trim().replaceAll("[^a-zA-Z0-9-]+", "_");
     }
 
     private ResponseEntity<?> forbidden() {
