@@ -1,4 +1,5 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import { setUnauthorizedHandler } from "../api";
 
 const AuthContext = createContext(null);
 
@@ -44,6 +45,13 @@ export function AuthProvider({ children }) {
         setUserName("");
         setJobTittle("");
     }
+
+    // ACHADO B1: registra este logout() como o handler que api.js chama
+    // sozinho quando qualquer chamada apiFetch recebe 401. Mantido
+    // atualizado a cada render (logout não muda de verdade, mas é barato).
+    useEffect(() => {
+        setUnauthorizedHandler(logout);
+    });
 
     return (
         <AuthContext.Provider value={{ token, userName, jobTittle, login, logout }}>
