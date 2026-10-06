@@ -233,7 +233,7 @@ class H2AllowListAccessExtratoFeatureTest {
 
         @Test
         void financeiro_continuaFuncionando() {
-            when(beneficiarioRepository.findAll()).thenReturn(List.of());
+            when(beneficiarioRepository.findAll()).thenReturn(new ArrayList<>());
             Authentication auth = authFor(FINANCEIRO);
             ResponseEntity<?> resposta = controller.listAll(auth);
             assertEquals(200, resposta.getStatusCode().value());
@@ -241,7 +241,7 @@ class H2AllowListAccessExtratoFeatureTest {
 
         @Test
         void admin_continuaFuncionando() {
-            when(beneficiarioRepository.findAll()).thenReturn(List.of());
+            when(beneficiarioRepository.findAll()).thenReturn(new ArrayList<>());
             Authentication auth = authFor(ADMIN);
             ResponseEntity<?> resposta = controller.listAll(auth);
             assertEquals(200, resposta.getStatusCode().value());
@@ -289,7 +289,7 @@ class H2AllowListAccessExtratoFeatureTest {
 
         @Test
         void financeiro_continuaFuncionando() {
-            when(categoriaLancamentoRepository.findAll()).thenReturn(List.of());
+            when(categoriaLancamentoRepository.findAll()).thenReturn(new ArrayList<>());
             Authentication auth = authFor(FINANCEIRO);
             ResponseEntity<?> resposta = controller.listAll(auth);
             assertEquals(200, resposta.getStatusCode().value());
@@ -297,7 +297,7 @@ class H2AllowListAccessExtratoFeatureTest {
 
         @Test
         void admin_continuaFuncionando() {
-            when(categoriaLancamentoRepository.findAll()).thenReturn(List.of());
+            when(categoriaLancamentoRepository.findAll()).thenReturn(new ArrayList<>());
             Authentication auth = authFor(ADMIN);
             ResponseEntity<?> resposta = controller.listAll(auth);
             assertEquals(200, resposta.getStatusCode().value());
@@ -345,7 +345,7 @@ class H2AllowListAccessExtratoFeatureTest {
 
         @Test
         void financeiro_continuaFuncionando() {
-            when(centroCustoRepository.findAll()).thenReturn(List.of());
+            when(centroCustoRepository.findAll()).thenReturn(new ArrayList<>());
             Authentication auth = authFor(FINANCEIRO);
             ResponseEntity<?> resposta = controller.listAll(auth);
             assertEquals(200, resposta.getStatusCode().value());
@@ -353,7 +353,7 @@ class H2AllowListAccessExtratoFeatureTest {
 
         @Test
         void admin_continuaFuncionando() {
-            when(centroCustoRepository.findAll()).thenReturn(List.of());
+            when(centroCustoRepository.findAll()).thenReturn(new ArrayList<>());
             Authentication auth = authFor(ADMIN);
             ResponseEntity<?> resposta = controller.listAll(auth);
             assertEquals(200, resposta.getStatusCode().value());
