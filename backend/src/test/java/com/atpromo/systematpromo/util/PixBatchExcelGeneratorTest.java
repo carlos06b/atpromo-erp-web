@@ -56,8 +56,11 @@ class PixBatchExcelGeneratorTest {
 
             // CORRIGIDO: o nome malicioso agora chega com um apóstrofo na
             // frente, forçando a célula a ser interpretada como texto puro
-            // em vez de fórmula.
-            assertEquals("'=cmd|' /C calc'!A0", celulaNome.getStringCellValue(),
+            // em vez de fórmula. O texto também vem em caixa alta porque
+            // PixBatchExcelGenerator.generate() já maiusculiza todo nome
+            // (regra de negócio existente, não relacionada a este achado) —
+            // o apóstrofo defensivo é aplicado depois disso.
+            assertEquals("'=CMD|' /C CALC'!A0", celulaNome.getStringCellValue(),
                     "O nome que começa com '=' deveria receber o prefixo defensivo (apóstrofo)");
         }
     }
