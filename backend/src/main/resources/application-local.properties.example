@@ -4,3 +4,10 @@ spring.datasource.password=
 
 jwt.secret=
 jwt.expiration-ms=86400000
+
+# ACHADO M1: show-sql e o DEBUG de Spring Security viviam no application.properties
+# base (sem guarda de perfil) - agora só existem aqui, carregados apenas em
+# ambiente local.
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+logging.level.org.springframework.security=DEBUG
