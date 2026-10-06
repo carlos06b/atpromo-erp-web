@@ -17,6 +17,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -187,6 +188,12 @@ public class RequestController {
         return ResponseEntity.status(201).body(mapOne(saved));
     }
 
+    // ACHADO H1: a aprovação usa um UPDATE condicional atômico
+    // (requestRepository.updateStatusIfPending) em vez do antigo padrão
+    // "ler status -> decidir em memória -> salvar", que permitia duas
+    // aprovações quase simultâneas lerem PENDENTE antes de qualquer uma
+    // commitar e gerarem dois pagamentos para a mesma solicitação.
+    @Transactional
     @PutMapping("/{id}/approve")
     public ResponseEntity<?> approve(@PathVariable int id, Authentication authentication) {
         User currentUser = currentUser(authentication);
@@ -200,18 +207,18 @@ public class RequestController {
             return ResponseEntity.notFound().build();
         }
 
-        if (!"PENDENTE".equalsIgnoreCase(request.getStatus())) {
-            return ResponseEntity.status(409).body(Map.of("message", "Apenas solicitações pendentes podem ser aprovadas."));
-        }
-
         Promoter promoter = promoterRepository.findById(request.getId_Promoter()).orElse(null);
         if (promoter == null) {
             return ResponseEntity.status(409).body(Map.of("message", "O promotor dessa solicitação não existe mais."));
         }
 
+        int updated = requestRepository.updateStatusIfPending(id, "APROVADO", currentUser.getId());
+        if (updated == 0) {
+            return ResponseEntity.status(409).body(Map.of("message", "Apenas solicitações pendentes podem ser aprovadas."));
+        }
+
         request.setId_UserFin(currentUser.getId());
         request.setStatus("APROVADO");
-        requestRepository.save(request);
 
         FinancePromoter finance = new FinancePromoter();
         finance.setIdPromoter(request.getId_Promoter());
