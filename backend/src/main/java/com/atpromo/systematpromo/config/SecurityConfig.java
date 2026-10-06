@@ -1,5 +1,6 @@
 package com.atpromo.systematpromo.config;
 
+import com.atpromo.systematpromo.security.DeleteConfirmationFilter;
 import com.atpromo.systematpromo.security.JwtAuthFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -22,14 +23,16 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final DeleteConfirmationFilter deleteConfirmationFilter;
 
     // Lista separada por vírgula. Em dev local, só localhost:5173. No Railway,
     // defina a variável de ambiente CORS_ALLOWED_ORIGINS com a URL do frontend publicado.
     @Value("${cors.allowed-origins:http://localhost:5173}")
     private String allowedOriginsRaw;
 
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter, DeleteConfirmationFilter deleteConfirmationFilter) {
         this.jwtAuthFilter = jwtAuthFilter;
+        this.deleteConfirmationFilter = deleteConfirmationFilter;
     }
 
     @Bean
@@ -65,7 +68,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                // achado C6: exige ticket de confirmação de senha em todo DELETE (ver DeleteConfirmationFilter)
+                .addFilterAfter(deleteConfirmationFilter, JwtAuthFilter.class);
 
         return http.build();
     }
