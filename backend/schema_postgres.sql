@@ -175,18 +175,22 @@ ALTER TABLE work_item_delivery
     ADD CONSTRAINT fk_work_item_delivery_promoter FOREIGN KEY (promoter_id) REFERENCES promoter (idpromoter);
 
 -- =========================================================
--- Usuário admin de teste, pra você conseguir logar assim que
--- o backend subir no Render (banco novo = zero usuários).
--- login: admin@atpromo.com   |   senha: Teste123!
--- (troca a senha depois, isso é só pra testar o deploy)
+-- Usuário admin inicial — SEM senha fixa commitada neste arquivo
+-- (achado C1 da auditoria de 05/10/2026: a senha "Teste123!" estava em
+-- texto claro aqui, num repositório público, usada pra popular o banco
+-- de produção no Render).
+--
+-- Depois de rodar este script num banco novo, crie o admin manualmente:
+--   1. Gere um hash bcrypt (custo 12) da senha que você vai usar de verdade.
+--   2. Rode, substituindo <SEU_EMAIL> e <HASH_BCRYPT_AQUI>:
+--        INSERT INTO "user" (name, email, password, jobTittle)
+--        VALUES ('Admin', '<SEU_EMAIL>', '<HASH_BCRYPT_AQUI>', 'ADMIN');
+--   3. Nunca commite esse INSERT com o hash real preenchido.
+--
+-- AÇÃO NECESSÁRIA SUA: se este script já rodou em produção com o admin de
+-- teste antigo (admin@atpromo.com / Teste123!), troque a senha dessa conta
+-- agora mesmo — eu não tenho (e não devo ter) acesso ao banco de produção
+-- pra fazer isso por você.
 -- =========================================================
-
-INSERT INTO "user" (name, email, password, jobTittle)
-VALUES (
-    'Admin Teste',
-    'admin@atpromo.com',
-    '$2b$12$rXOaEBy6d5wCkCjrUILzJubM/LehN8Sp5MdDn96cdzOOsUHzWN7mq',
-    'ADMIN'
-);
 
 COMMIT;
