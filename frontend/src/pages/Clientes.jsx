@@ -124,9 +124,9 @@ export default function Clientes() {
     setDeleteTarget(id);
   }
 
-  async function confirmDelete() {
+  async function confirmDelete(ticket) {
     try {
-      await apiFetch(`/clients/${deleteTarget}`, { method: "DELETE", token });
+      await apiFetch(`/clients/${deleteTarget}`, { method: "DELETE", token, deleteTicket: ticket });
       setDeleteTarget(null);
       await loadClients();
     } catch (err) {

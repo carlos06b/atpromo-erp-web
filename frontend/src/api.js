@@ -3,11 +3,15 @@
 // (ex: https://seu-backend.up.railway.app/api) antes de gerar o build do frontend.
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
 
-export async function apiFetch(path, { method = "GET", body, token } = {}) {
+export async function apiFetch(path, { method = "GET", body, token, deleteTicket } = {}) {
     const headers = { "Content-Type": "application/json" };
 
     if (token) {
         headers.Authorization = `Bearer ${token}`;
+    }
+
+    if (deleteTicket) {
+        headers["X-Delete-Confirmation"] = deleteTicket;
     }
 
     const response = await fetch(`${API_BASE_URL}${path}`, {

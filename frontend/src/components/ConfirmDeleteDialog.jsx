@@ -16,13 +16,13 @@ export default function ConfirmDeleteDialog({ open, onClose, onConfirmed, itemLa
         setChecking(true);
 
         try {
-            await apiFetch("/account/verify-password", {
+            const resposta = await apiFetch("/account/verify-password", {
                 method: "POST",
                 body: { password },
                 token,
             });
             setPassword("");
-            onConfirmed();
+            onConfirmed(resposta?.ticket);
         } catch (err) {
             setError("Senha incorreta. Tente novamente.");
         } finally {

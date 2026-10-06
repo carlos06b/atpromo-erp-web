@@ -204,9 +204,9 @@ export default function Promotores() {
     setDeleteTarget(id);
   }
 
-  async function confirmDelete() {
+  async function confirmDelete(ticket) {
     try {
-      await apiFetch(`/promoters/${deleteTarget}`, { method: "DELETE", token });
+      await apiFetch(`/promoters/${deleteTarget}`, { method: "DELETE", token, deleteTicket: ticket });
       setDeleteTarget(null);
       await loadPromoters();
     } catch (err) {

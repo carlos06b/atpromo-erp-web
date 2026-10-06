@@ -264,10 +264,10 @@ export default function Descritivos() {
     }
   }
 
-  async function handleDeleteDescritivo() {
+  async function handleDeleteDescritivo(ticket) {
     if (!openDescritivo) return;
     try {
-      await apiFetch(`/descritivos/${openDescritivo.id}`, { method: "DELETE", token });
+      await apiFetch(`/descritivos/${openDescritivo.id}`, { method: "DELETE", token, deleteTicket: ticket });
       setDeleteDescritivoTarget(false);
       setOpenDescritivo(null);
       await loadDescritivos(selectedClienteId);
@@ -377,11 +377,12 @@ export default function Descritivos() {
     }
   }
 
-  async function confirmDeleteLinha() {
+  async function confirmDeleteLinha(ticket) {
     try {
       const data = await apiFetch(`/descritivos/${openDescritivo.id}/linhas/${deleteLinhaTarget}`, {
         method: "DELETE",
         token,
+        deleteTicket: ticket,
       });
       setOpenDescritivo(data);
       setDeleteLinhaTarget(null);
@@ -477,7 +478,7 @@ export default function Descritivos() {
     }
   }
 
-  async function confirmBulkDelete() {
+  async function confirmBulkDelete(ticket) {
     setDeletingBulk(true);
     try {
       const linhasSelecionadas = openDescritivo.linhas.filter((l) => selectedLinhaIds.has(l.id));
@@ -485,6 +486,7 @@ export default function Descritivos() {
         await apiFetch(`/descritivos/${openDescritivo.id}/linhas/${linha.id}`, {
           method: "DELETE",
           token,
+          deleteTicket: ticket,
         });
       }
       await openDescritivoDetail(openDescritivo.id);

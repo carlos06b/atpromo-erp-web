@@ -165,9 +165,9 @@ export default function Estoque() {
     setDeleteItemTarget(id);
   }
 
-  async function confirmDeleteItem() {
+  async function confirmDeleteItem(ticket) {
     try {
-      await apiFetch(`/inventory-items/${deleteItemTarget}`, { method: "DELETE", token });
+      await apiFetch(`/inventory-items/${deleteItemTarget}`, { method: "DELETE", token, deleteTicket: ticket });
       setDeleteItemTarget(null);
       await loadData();
     } catch (err) {
@@ -230,9 +230,9 @@ export default function Estoque() {
     setDeleteMovementTarget(id);
   }
 
-  async function confirmDeleteMovement() {
+  async function confirmDeleteMovement(ticket) {
     try {
-      await apiFetch(`/stock-movements/${deleteMovementTarget}`, { method: "DELETE", token });
+      await apiFetch(`/stock-movements/${deleteMovementTarget}`, { method: "DELETE", token, deleteTicket: ticket });
       setDeleteMovementTarget(null);
       await loadData();
     } catch (err) {

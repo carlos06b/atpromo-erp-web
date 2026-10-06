@@ -484,7 +484,7 @@ export default function Despesas() {
     setDeleteTarget({ kind, id });
   }
 
-  async function confirmDelete() {
+  async function confirmDelete(ticket) {
     const { kind, id } = deleteTarget;
     const path =
       kind === "fixed"
@@ -494,7 +494,7 @@ export default function Despesas() {
         : `/variable-expenses/${id}`;
 
     try {
-      await apiFetch(path, { method: "DELETE", token });
+      await apiFetch(path, { method: "DELETE", token, deleteTicket: ticket });
       setDeleteTarget(null);
       await loadData();
     } catch (err) {
