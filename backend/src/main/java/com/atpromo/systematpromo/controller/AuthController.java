@@ -52,9 +52,14 @@ public class AuthController {
     public record ForgotPasswordRequest(String email) {}
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        if (loginAttemptService.isBlocked(request.email())) {
-            long minutes = loginAttemptService.minutesRemaining(request.email());
+    public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
+        // ACHADO H4: o bloqueio agora é por email + IP (ver LoginAttemptService),
+        // para que trancar a conta de outra pessoa exija estar atrás do
+        // mesmo IP que ela, em vez de bastar saber o email.
+        String ip = clientIp(httpRequest);
+
+        if (loginAttemptService.isBlocked(request.email(), ip)) {
+            long minutes = loginAttemptService.minutesRemaining(request.email(), ip);
             return ResponseEntity.status(429).body(Map.of(
                     "message",
                     "Muitas tentativas de login com esse e-mail. Tente novamente em cerca de " + minutes + " minuto(s)."
@@ -64,18 +69,18 @@ public class AuthController {
         Optional<User> userOpt = userRepository.findByEmail(request.email());
 
         if (userOpt.isEmpty()) {
-            loginAttemptService.registerFailure(request.email());
+            loginAttemptService.registerFailure(request.email(), ip);
             return ResponseEntity.status(401).body("Email ou senha inválidos.");
         }
 
         User user = userOpt.get();
 
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            loginAttemptService.registerFailure(request.email());
+            loginAttemptService.registerFailure(request.email(), ip);
             return ResponseEntity.status(401).body("Email ou senha inválidos.");
         }
 
-        loginAttemptService.registerSuccess(request.email());
+        loginAttemptService.registerSuccess(request.email(), ip);
 
         boolean remember = Boolean.TRUE.equals(request.rememberMe());
         String token = remember
