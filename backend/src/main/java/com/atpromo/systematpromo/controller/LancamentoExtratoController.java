@@ -440,6 +440,11 @@ public class LancamentoExtratoController {
 
         List<PixPendenteView> pendentes = financePromoterRepository.findAll().stream()
                 .filter(f -> !lancamentoExtratoRepository.existsByOrigemTipoAndOrigemId("SOLICITACAO_PIX", f.getId()))
+                // DESCONTO e BONUS nao sao pagamentos avulsos via Pix: eles sao
+                // absorvidos no calculo da folha (PayrollController ja soma bonus e
+                // subtrai desconto do salario base pra chegar no valor liquido), entao
+                // nao devem aparecer como "Pix pendente" nem ser lancados separadamente.
+                .filter(f -> !"DESCONTO".equalsIgnoreCase(f.getType()) && !"BONUS".equalsIgnoreCase(f.getType()))
                 .sorted(Comparator.comparing(FinancePromoter::getDate, Comparator.nullsLast(Comparator.reverseOrder())))
                 .map(f -> new PixPendenteView(
                         f.getId(),
@@ -468,6 +473,14 @@ public class LancamentoExtratoController {
         FinancePromoter financePromoter = financePromoterRepository.findById(financePromoterId).orElse(null);
         if (financePromoter == null) {
             return ResponseEntity.notFound().build();
+        }
+
+        // Mesma regra do listPixPendentes: desconto e bonus sao resolvidos na folha
+        // de pagamento (PayrollController), nao via Pix avulso. Essa checagem fica
+        // aqui tambem (alem de tirar da listagem) pra nao depender so da tela nao
+        // mostrar a opcao - protege contra chamada direta na API.
+        if ("DESCONTO".equalsIgnoreCase(financePromoter.getType()) || "BONUS".equalsIgnoreCase(financePromoter.getType())) {
+            return badRequest("Esse tipo de lançamento (" + financePromoter.getType() + ") é processado na folha de pagamento, não via Pix avulso.");
         }
 
         if (lancamentoExtratoRepository.existsByOrigemTipoAndOrigemId("SOLICITACAO_PIX", financePromoterId)) {
